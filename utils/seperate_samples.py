@@ -184,7 +184,7 @@ def print_info_f_lists(scorelist):
         print('{:.8f},{:.8f},{:.8f},{:.8f}'.format(row[0], row[1], row[2], row[3]))
 
 
-def get_fluencies_indices(data, order_index, label_indices):
+def get_fluencies_indices(data, order_index, label_indices, topic, dst_dir):
     scorelist = [[], [], [], []]
     variants = [set(), set(), set(), set()]
     skipped = 0
@@ -202,7 +202,7 @@ def get_fluencies_indices(data, order_index, label_indices):
                     scorelist[cats[i]].append(int(label))
                 else:
                     skipped += 1
-    write_to_files(variants, topic)
+    write_to_files(variants, topic, dst_dir)
     print('skipped {}'.format(skipped))
     print_info_f_lists(scorelist)
     return scorelist
@@ -213,67 +213,70 @@ def group(variants, row, a_cat, b_cat):
     variants[b_cat].add(row[1])
 
 
-def write_to_files(variants, topic):
+def seperate_samples(topic, src_dir, dst_dir):
+    # hardcoded indices
+    category_index = -1  # index of encoded seed and methods
+    topic_indices = [2, 6, 10]
+    fluency_indices = [(3, 4), (7, 8), (11, 12)]
+
+    all_scores = np.zeros(MAX_FILES, dtype=int)
+    all_counts = np.zeros(MAX_FILES, dtype=int)
+    percs_ordered = np.zeros((len(file_info), MAX_FILES))  # percents saved in same order as file names
+    for i, fname in enumerate(file_info):
+        filename = src_dir + fname
+        headers, data = get_data(filename)
+        print(fname)
+        scores, counts = get_counts_vote_row(data, category_index, topic_indices)
+        #     scores, counts = get_counts_vote_all(data, category_index, topic_indices) # voting out of 9
+        all_scores += scores
+        all_counts += counts
+        percs_ordered[i] = 100 * scores / counts
+        print()
+    print('all:')
+    print_info_t(all_scores, all_counts)
+    print('\n------------\n')
+
+    # uber labeled fluencies
+    all_fluencies = [[], [], [], []]
+    for fname in file_info:
+        filename = src_dir + fname
+        headers, data = get_data(filename)
+        print(fname)
+        new_scores = get_fluencies_indices(data, category_index, fluency_indices, topic, dst_dir)
+        for i in range(len(all_fluencies)):
+            all_fluencies[i].extend(new_scores[i])
+        print()
+    print('all:')
+    print_info_f_lists(all_fluencies)
+    print('total counts')
+    for x in all_fluencies:
+        print(len(x))
+
+
+def write_to_files(variants, topic, dst_dir):
     method_labels = ['baseline (B)', 'gradient (BC)', 'baseline+reranking (BR)', 'gradient+reranking (BCR)']
     for i in range(len(variants)):
         for j, item in enumerate(variants[i]):
-            with open('../automated_evaluation/{}/'.format(topic) + method_labels[i], 'a') as f:
+            with open('{}/{}/'.format(dst_dir, topic) + method_labels[i], 'a') as f:
                 str = item.strip()[13:].replace('\n', '')
                 # str = item.strip()[13:]
                 f.write("%s\n" % str)
 
 
-# aggregated human labeled everything
-dirname = '../human_annotation/pplm_labeled_csvs/'
-# comment out any of the below if you don't want to include them in "all"
-file_info = [
-    'computers.csv',
-    #     'legal.csv',
-    #     'military.csv',
-    #     'politics.csv',
-    # 'religion.csv',
-    # 'science.csv',
-    #     'space.csv',
-    #      'negative.csv',
-    #      'positive.csv',
-    #     'clickbait.csv'
-]
-topic = file_info[0][:-4]
-
-# hardcoded indices
-category_index = -1  # index of encoded seed and methods
-topic_indices = [2, 6, 10]
-fluency_indices = [(3, 4), (7, 8), (11, 12)]
-
-all_scores = np.zeros(MAX_FILES, dtype=int)
-all_counts = np.zeros(MAX_FILES, dtype=int)
-percs_ordered = np.zeros((len(file_info), MAX_FILES))  # percents saved in same order as file names
-for i, fname in enumerate(file_info):
-    filename = dirname + fname
-    headers, data = get_data(filename)
-    print(fname)
-    scores, counts = get_counts_vote_row(data, category_index, topic_indices)
-    #     scores, counts = get_counts_vote_all(data, category_index, topic_indices) # voting out of 9
-    all_scores += scores
-    all_counts += counts
-    percs_ordered[i] = 100 * scores / counts
-    print()
-print('all:')
-print_info_t(all_scores, all_counts)
-print('\n------------\n')
-
-# uber labeled fluencies
-all_fluencies = [[], [], [], []]
-for fname in file_info:
-    filename = dirname + fname
-    headers, data = get_data(filename)
-    print(fname)
-    new_scores = get_fluencies_indices(data, category_index, fluency_indices)
-    for i in range(len(all_fluencies)):
-        all_fluencies[i].extend(new_scores[i])
-    print()
-print('all:')
-print_info_f_lists(all_fluencies)
-print('total counts')
-for x in all_fluencies:
-    print(len(x))
+if __name__ == '__main__':
+    src_dir = '../human_annotation/pplm_labeled_csvs/'
+    dst_dir = '../automated_evaluation/'
+    file_info = [
+        'computers.csv',
+        # 'legal.csv',
+        # 'military.csv',
+        # 'politics.csv',
+        # 'religion.csv',
+        # 'science.csv',
+        # 'space.csv',
+        # 'negative.csv',
+        # 'positive.csv',
+        # 'clickbait.csv'
+    ]
+    topic = file_info[0][:-4]
+    seperate_samples(topic, src_dir, dst_dir)
