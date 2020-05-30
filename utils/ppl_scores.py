@@ -1,5 +1,5 @@
 import math
-# import torch
+import torch
 import statistics
 # from transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
 
@@ -9,6 +9,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 tokenizer = OpenAIGPTTokenizer.from_pretrained('openai-gpt')
+# tokenizer.set_special_tokens('<pantyhose>')
+# tokenizer.
 model = OpenAIGPTLMHeadModel.from_pretrained('openai-gpt')
 model.eval()
 
@@ -19,6 +21,10 @@ def score_py(sentence):
     with torch.no_grad():
         loss = model(tensor_input, lm_labels=tensor_input)
     return math.exp(loss)
+
+
+# tokenizer.add_special_tokens({'bos_token': '<|endoftext|>'})
+# model.resize_token_embeddings(len(tokenizer))
 
 
 def score_trans(sentence):
@@ -47,18 +53,15 @@ def ppl_scores(topic, src_dir):
                  '{}/{}/gradient (BC)'.format(src_dir, topic),
                  '{}/{}/gradient+reranking (BCR)'.format(src_dir, topic)]
     print('{}:'.format(topic))
-    lines = []
+    samples = []
     for l in range(len(labels)):
         with open(locations[l]) as f:
-            lines = f.read().splitlines()
+            samples = f.read().split('<|endoftext|>')[1:]
             f.close()
 
         scores = []
-        for s in lines:
-            if s.strip() != '':
-                r = score_py(s)
-                if r < 200:
-                    scores.append(r)
+        for s in samples:
+            scores.append(score_trans(s))
         # print(scores)
         print('{}: {}'.format(labels[l], statistics.mean(scores)))
 
@@ -66,7 +69,7 @@ def ppl_scores(topic, src_dir):
 
 
 if __name__ == '__main__':
-    src_dir = '/Users/xuchen/core/pycharm/project/PPLM/automated_evaluation'
+    src_dir = '../automated_evaluation'
     file_info = [
         'computers.csv',
         # 'legal.csv',
@@ -81,4 +84,5 @@ if __name__ == '__main__':
     ]
     topic = file_info[0][:-4]
     # tokenizer.special_tokens['sos'] = '<|endoftext|>'
-    ppl_scores(topic, src_dir)
+    # ppl_scores(topic, src_dir)
+    print(score_trans('<|endoftext|> I love\n\nit'))

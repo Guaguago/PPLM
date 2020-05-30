@@ -255,25 +255,44 @@ def seperate_samples(topic, src_dir, dst_dir):
 
 def write_to_files(variants, topic, dst_dir):
     method_labels = ['baseline (B)', 'gradient (BC)', 'baseline+reranking (BR)', 'gradient+reranking (BCR)']
+    ppl_scores, dist_scores = [], []
     for i in range(len(variants)):
-        for j, item in enumerate(variants[i]):
-            with open('{}/{}/'.format(dst_dir, topic) + method_labels[i], 'a') as f:
-                str = item.strip()[13:].replace('\n', '')
-                # str = item.strip()[13:]
-                f.write("%s\n" % str)
+        from utils.ppl_scores import score_py
+        from utils.dist_scores import eval_distinct
+        import statistics as stat
+        ppl_scores.append(stat.mean([score_py(s.strip().replace('<|endoftext|>', '')) for s in variants[i]]))
+        # ppl_scores.append(stat.mean([score_py(s[13:]) for s in variants[i]]))
+        dist_scores.append(eval_distinct(variants[i], 1))
+
+    print(topic)
+    print('ppl, dist-1')
+    print('  B:{} {}'.format(ppl_scores[0], dist_scores[0]))
+    print(' BR:{} {}'.format(ppl_scores[2], dist_scores[2]))
+    print(' BC:{} {}'.format(ppl_scores[1], dist_scores[1]))
+    print('BCR:{} {}'.format(ppl_scores[3], dist_scores[3]))
+
+    # for j, item in enumerate(variants[i]):
+    #     from copy_ppl import score_py
+    #     import statistics as stat
+    #     score_py(item[13:])
+
+    # with open('{}/{}/'.format(dst_dir, topic) + method_labels[i], 'a') as f:
+    #     # str = item.strip()[13:].replace('\n', '')
+    #     # str = item.strip()[13:]
+    #     f.write("%s" % item)
 
 
 if __name__ == '__main__':
     src_dir = '../human_annotation/pplm_labeled_csvs/'
     dst_dir = '../automated_evaluation/'
     file_info = [
-        'computers.csv',
+        # 'computers.csv',
         # 'legal.csv',
         # 'military.csv',
         # 'politics.csv',
         # 'religion.csv',
         # 'science.csv',
-        # 'space.csv',
+        'space.csv',
         # 'negative.csv',
         # 'positive.csv',
         # 'clickbait.csv'
