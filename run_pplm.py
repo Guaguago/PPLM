@@ -559,12 +559,16 @@ def generate_text_pplm(
 
         # run model forward to obtain unperturbed
         if past is None and output_so_far is not None:
-            last = output_so_far[:, -1:]
+            last = output_so_far[:, -1:]  # last shape: (batch_size, seq_len)
             if output_so_far.shape[1] > 1:
                 _, past, _ = model(output_so_far[:, :-1])
 
         unpert_logits, unpert_past, unpert_all_hidden = model(output_so_far)
+        # shape of unpert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head=64)
+        # shape of unpert_all_hidden: (1+num_layers, batch_size, seq_len, h_size=1024)
+
         unpert_last_hidden = unpert_all_hidden[-1]
+        # shape of unpert_last_hidden: (batch_size, seq_len, h_size=1024)
 
         # check if we are abowe grad max length
         if i >= grad_length:
@@ -575,6 +579,8 @@ def generate_text_pplm(
         # modify the past if necessary
         if not perturb or num_iterations == 0:
             pert_past = past
+            # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
+
 
         else:
             accumulated_hidden = unpert_last_hidden[:, :-1, :]
@@ -607,9 +613,14 @@ def generate_text_pplm(
             else:
                 pert_past = past
 
+        # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
         pert_logits, past, pert_all_hidden = model(last, past=pert_past)
+        # shape of pert_logits: (batch_size, seq_len=1, vocab_size)
+
         pert_logits = pert_logits[:, -1, :] / temperature  # + SMALL_CONST
+        # shape of pert_logits: (batch_size, vocab_size)
         pert_probs = F.softmax(pert_logits, dim=-1)
+        # shape of pert_probs: (batch_size, vocab_size)
 
         if classifier is not None:
             ce_loss = torch.nn.CrossEntropyLoss()
@@ -641,10 +652,12 @@ def generate_text_pplm(
 
         else:
             pert_logits = top_k_filter(pert_logits, k=top_k)  # + SMALL_CONST
+            # shape of pert_logits: (batch_size, vocab_size)
             pert_probs = F.softmax(pert_logits, dim=-1)
 
         # sample or greedy
         if sample:
+            # shape of pert_probs: (batch_size, vocab_size)
             last = torch.multinomial(pert_probs, num_samples=1)
 
         else:
@@ -654,7 +667,7 @@ def generate_text_pplm(
         output_so_far = (
             last if output_so_far is None
             else torch.cat((output_so_far, last), dim=1)
-        )
+        )  # shape of output_so_far: (batch_size, seq_len)
         if verbosity_level >= REGULAR:
             print(tokenizer.decode(output_so_far.tolist()[0]))
 
@@ -729,7 +742,7 @@ def run_pplm_example(
     # load pretrained model
     model = GPT2LMHeadModel.from_pretrained(
         pretrained_model,
-        output_hidden_states=True
+        output_hidden_states=True  # passed to model's __init__ method
     )
     model.to(device)
     model.eval()
