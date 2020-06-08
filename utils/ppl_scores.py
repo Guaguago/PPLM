@@ -1,22 +1,29 @@
 import math
 import torch
 import statistics
-# from transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
+
+# from transformers import OpenAIGPTTokenizer, OpenAIGPTLMHeadModel
 
 from pytorch_pretrained_bert import OpenAIGPTTokenizer, OpenAIGPTLMHeadModel
 import logging
 
 logging.basicConfig(level=logging.INFO)
 
+# tokenizer = OpenAIGPTTokenizer.from_pretrained('openai-gpt', bos_token='<|endoftext|>')
 tokenizer = OpenAIGPTTokenizer.from_pretrained('openai-gpt')
-# tokenizer.set_special_tokens('<pantyhose>')
-# tokenizer.
+# tokenizer.set_special_tokens({'bos_token': '<|endoftext|>'})
+#                               'end_token': '<|endoftext|>',
+#                               'unk_token': '<|endoftext|>'})
+# print(tokenizer.special_tokens)
 model = OpenAIGPTLMHeadModel.from_pretrained('openai-gpt')
+# model.resize_token_embeddings(len(tokenizer))
 model.eval()
 
 
 def score_py(sentence):
     tokenize_input = tokenizer.tokenize(sentence)
+    # indexed_tokens = tokenizer.encode(sentence, add_special_tokens=True)
+    tokenize_input = ['<|endoftext|>'] + tokenize_input
     tensor_input = torch.tensor([tokenizer.convert_tokens_to_ids(tokenize_input)])
     with torch.no_grad():
         loss = model(tensor_input, lm_labels=tensor_input)
@@ -85,4 +92,5 @@ if __name__ == '__main__':
     topic = file_info[0][:-4]
     # tokenizer.special_tokens['sos'] = '<|endoftext|>'
     # ppl_scores(topic, src_dir)
-    print(score_trans('<|endoftext|> I love\n\nit'))
+    print(score_trans('<|endoftext|>I love it'))
+    # print(score_trans('<|endoftext|> I love it'))

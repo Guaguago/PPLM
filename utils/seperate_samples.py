@@ -257,11 +257,11 @@ def write_to_files(variants, topic, dst_dir):
     method_labels = ['baseline (B)', 'gradient (BC)', 'baseline+reranking (BR)', 'gradient+reranking (BCR)']
     ppl_scores, dist_scores = [], []
     for i in range(len(variants)):
-        from utils.ppl_scores import score_py
+        from utils.ppl_scores import score_py, score_trans
         from utils.dist_scores import eval_distinct
         import statistics as stat
-        ppl_scores.append(stat.mean([score_py(s.strip().replace('<|endoftext|>', '')) for s in variants[i]]))
-        # ppl_scores.append(stat.mean([score_py(s[13:]) for s in variants[i]]))
+        # ppl_scores.append(stat.mean([score_trans(s) for s in variants[i]]))
+        ppl_scores.append(stat.mean([score_py(s[13:]) for s in variants[i]]))
         dist_scores.append(eval_distinct(variants[i], 1))
 
     print(topic)
@@ -291,8 +291,8 @@ if __name__ == '__main__':
         # 'military.csv',
         # 'politics.csv',
         # 'religion.csv',
-        # 'science.csv',
-        'space.csv',
+        'science.csv',
+        # 'space.csv',
         # 'negative.csv',
         # 'positive.csv',
         # 'clickbait.csv'

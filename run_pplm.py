@@ -136,11 +136,11 @@ def perturb_past(
         device='cuda',
         verbosity_level=REGULAR
 ):
-    # Generate inital perturbed past
+    # Generate inital perturbed past: $\delta H$
     grad_accumulator = [
         (np.zeros(p.shape).astype("float32"))
-        for p in past
-    ]
+        for p in past  # past: seq_len-1
+    ]  # note: it's new, not upon
 
     if accumulated_hidden is None:
         accumulated_hidden = 0
@@ -158,7 +158,7 @@ def perturb_past(
     # Generate a mask is gradient perturbated is based on a past window
     _, _, _, curr_length, _ = past[0].shape
 
-    if curr_length > window_length and window_length > 0:
+    if curr_length > window_length and window_length > 0:  # the current length of the past
         ones_key_val_shape = (
                 tuple(past[0].shape[:-2])
                 + tuple([window_length])
@@ -181,7 +181,7 @@ def perturb_past(
         ).to(device)
     else:
         window_mask = torch.ones_like(past[0]).to(device)
-
+        # shape of window_mask = (2, batch_size, num_heads, seq_len-1, embed_size_per_head)
     # accumulate perturbations for num_iterations
     loss_per_iter = []
     new_accumulated_hidden = None
@@ -190,15 +190,16 @@ def perturb_past(
             print("Iteration ", i + 1)
         curr_perturbation = [
             to_var(torch.from_numpy(p_), requires_grad=True, device=device)
-            for p_ in grad_accumulator
-        ]
+            for p_ in grad_accumulator  # iter layers
+        ]  # seq_len-1
 
-        # Compute hidden using perturbed past
+        # Compute hidden using perturbed past:
         perturbed_past = list(map(add, past, curr_perturbation))
         _, _, _, curr_length, _ = curr_perturbation[0].shape
         all_logits, _, all_hidden = model(last, past=perturbed_past)
-        hidden = all_hidden[-1]
+        hidden = all_hidden[-1]  # shape of hidden: (batch_size, seq_len=1, h_size)
         new_accumulated_hidden = accumulated_hidden + torch.sum(
+            # shape of accumulated_hidden (batch_size, h_size=1024)
             hidden,
             dim=1
         ).detach()
@@ -210,7 +211,7 @@ def perturb_past(
         loss_list = []
         if loss_type == PPLM_BOW or loss_type == PPLM_BOW_DISCRIM:
             for one_hot_bow in one_hot_bows_vectors:
-                bow_logits = torch.mm(probs, torch.t(one_hot_bow))
+                bow_logits = torch.mm(probs, torch.t(one_hot_bow))  # shape bow_logits: (1, bow_size)
                 bow_loss = -torch.log(torch.sum(bow_logits))
                 loss += bow_loss
                 loss_list.append(bow_loss)
@@ -268,8 +269,9 @@ def perturb_past(
 
         # compute gradients
         loss.backward()
+        from torchviz import make_dot, make_dot_from_trace
+        make_dot(loss).render("attached", format="pdf")
 
-        # calculate gradient norms
         if grad_norms is not None and loss_type == PPLM_BOW:
             grad_norms = [
                 torch.max(grad_norms[index], torch.norm(p_.grad * window_mask))
@@ -429,8 +431,8 @@ def full_text_generation(
 
     bow_indices = []
     if bag_of_words:
-        bow_indices = get_bag_of_words_indices(bag_of_words.split(";"),
-                                               tokenizer)
+        bow_indices = get_bag_of_words_indices(bag_of_words.split(";"), tokenizer)
+        # shape of bow_indices = (1, num, seq_len)
 
     if bag_of_words and classifier:
         loss_type = PPLM_BOW_DISCRIM
@@ -537,10 +539,10 @@ def generate_text_pplm(
         while len(context_t.shape) < 2:
             context_t = context_t.unsqueeze(0)
         output_so_far = context_t
-
+        # shape of output_so_far: (batch_size, seq_len)
     # collect one hot vectors for bags of words
-    one_hot_bows_vectors = build_bows_one_hot_vectors(bow_indices, tokenizer,
-                                                      device)
+    one_hot_bows_vectors = build_bows_one_hot_vectors(bow_indices, tokenizer, device)
+    # shape: (1, num_bows, vocab_size)
 
     grad_norms = None
     last = None
@@ -562,8 +564,9 @@ def generate_text_pplm(
             last = output_so_far[:, -1:]  # last shape: (batch_size, seq_len)
             if output_so_far.shape[1] > 1:
                 _, past, _ = model(output_so_far[:, :-1])
-
+                # shape of past: (num_layers, 2, batch_size, num_heads, seq_len-1, embed_size_per_head=64)
         unpert_logits, unpert_past, unpert_all_hidden = model(output_so_far)
+        # shape of unpert_logits: (batch_size, seq_len, vocab_size)
         # shape of unpert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head=64)
         # shape of unpert_all_hidden: (1+num_layers, batch_size, seq_len, h_size=1024)
 
@@ -582,7 +585,7 @@ def generate_text_pplm(
             # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
 
 
-        else:
+        else:  # shape of unpert_last_hidden: (batch_size, seq_len, h_size=1024)
             accumulated_hidden = unpert_last_hidden[:, :-1, :]
             accumulated_hidden = torch.sum(accumulated_hidden, dim=1)
 
@@ -591,9 +594,9 @@ def generate_text_pplm(
                     past,
                     model,
                     last,
-                    unpert_past=unpert_past,
-                    unpert_logits=unpert_logits,
-                    accumulated_hidden=accumulated_hidden,
+                    unpert_past=unpert_past,  # seq_len
+                    unpert_logits=unpert_logits,  # seq_len
+                    accumulated_hidden=accumulated_hidden,  # (batch_size, h_size=1024)
                     grad_norms=grad_norms,
                     stepsize=current_stepsize,
                     one_hot_bows_vectors=one_hot_bows_vectors,
@@ -614,7 +617,7 @@ def generate_text_pplm(
                 pert_past = past
 
         # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
-        pert_logits, past, pert_all_hidden = model(last, past=pert_past)
+        pert_logits, past, pert_all_hidden = model(last, past=pert_past)  # update past
         # shape of pert_logits: (batch_size, seq_len=1, vocab_size)
 
         pert_logits = pert_logits[:, -1, :] / temperature  # + SMALL_CONST
@@ -737,7 +740,7 @@ def run_pplm_example(
             pretrained_model = discriminator_pretrained_model
             if verbosity_level >= REGULAR:
                 print("discrim = {}, pretrained_model set "
-                "to discriminator's = {}".format(discrim, pretrained_model))
+                      "to discriminator's = {}".format(discrim, pretrained_model))
 
     # load pretrained model
     model = GPT2LMHeadModel.from_pretrained(
