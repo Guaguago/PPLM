@@ -185,6 +185,8 @@ def perturb_past(
     # accumulate perturbations for num_iterations
     loss_per_iter = []
     new_accumulated_hidden = None
+    original_probs = None
+
     for i in range(num_iterations):
         if verbosity_level >= VERBOSE:
             print("Iteration ", i + 1)
@@ -206,6 +208,10 @@ def perturb_past(
         # TODO: Check the layer-norm consistency of this with trained discriminator (Sumanth)
         logits = all_logits[:, -1, :]
         probs = F.softmax(logits, dim=-1)
+
+        # tag original probs
+        if i == 0:
+            original_probs = probs
 
         loss = 0.0
         loss_list = []
@@ -311,7 +317,7 @@ def perturb_past(
     ]
     pert_past = list(map(add, past, grad_accumulator))
 
-    return pert_past, new_accumulated_hidden, grad_norms, loss_per_iter
+    return pert_past, new_accumulated_hidden, grad_norms, loss_per_iter, original_probs
 
 
 def get_classifier(
@@ -548,6 +554,7 @@ def generate_text_pplm(
     last = None
     unpert_discrim_loss = 0
     loss_in_time = []
+    original_probs = None
 
     if verbosity_level >= VERBOSE:
         range_func = trange(length, ascii=True)
@@ -590,7 +597,7 @@ def generate_text_pplm(
             accumulated_hidden = torch.sum(accumulated_hidden, dim=1)
 
             if past is not None:
-                pert_past, _, grad_norms, loss_this_iter = perturb_past(
+                pert_past, _, grad_norms, loss_this_iter, original_probs = perturb_past(
                     past,
                     model,
                     last,
@@ -623,7 +630,8 @@ def generate_text_pplm(
         pert_logits = pert_logits[:, -1, :] / temperature  # + SMALL_CONST
         # shape of pert_logits: (batch_size, vocab_size)
         pert_probs = F.softmax(pert_logits, dim=-1)
-        # shape of pert_probs: (batch_size, vocab_size)
+
+        # shape of pert_probs: (batch_size=1, vocab_size)
 
         if classifier is not None:
             ce_loss = torch.nn.CrossEntropyLoss()
@@ -661,7 +669,16 @@ def generate_text_pplm(
         # sample or greedy
         if sample:
             # shape of pert_probs: (batch_size, vocab_size)
-            last = torch.multinomial(pert_probs, num_samples=1)
+            last = torch.multinomial(pert_probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
+
+            def get_word_prob(probs, idx):
+                return probs[idx]
+
+            if perturb:
+                word_original_p = get_word_prob(original_probs[0], last[0])
+                word_perturbed_p = get_word_prob(pert_probs[0], last[0])
+
+
 
         else:
             _, last = torch.topk(pert_probs, k=1, dim=-1)
@@ -673,6 +690,15 @@ def generate_text_pplm(
         )  # shape of output_so_far: (batch_size, seq_len)
         if verbosity_level >= REGULAR:
             print(tokenizer.decode(output_so_far.tolist()[0]))
+            if perturb:
+                str = '{}[{:.3}->{:.3}]'.format(
+                    tokenizer.decode(output_so_far.tolist()[0]),
+                    word_original_p.tolist()[0],
+                    word_perturbed_p.tolist()[0])
+
+                with open('probs states', 'a') as f:
+                    f.write(str + '\n')
+
 
     return output_so_far, unpert_discrim_loss, loss_in_time
 
