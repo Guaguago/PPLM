@@ -186,6 +186,7 @@ def perturb_past(
     loss_per_iter = []
     new_accumulated_hidden = None
     original_probs = None
+    original_word = None
 
     for i in range(num_iterations):
         if verbosity_level >= VERBOSE:
@@ -212,6 +213,7 @@ def perturb_past(
         # tag original probs
         if i == 0:
             original_probs = probs
+            original_word = torch.multinomial(original_probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
 
         loss = 0.0
         loss_list = []
@@ -275,8 +277,8 @@ def perturb_past(
 
         # compute gradients
         loss.backward()
-        from torchviz import make_dot, make_dot_from_trace
-        make_dot(loss).render("attached", format="pdf")
+        # from torchviz import make_dot, make_dot_from_trace
+        # make_dot(loss).render("attached", format="pdf")
 
         if grad_norms is not None and loss_type == PPLM_BOW:
             grad_norms = [
@@ -317,7 +319,7 @@ def perturb_past(
     ]
     pert_past = list(map(add, past, grad_accumulator))
 
-    return pert_past, new_accumulated_hidden, grad_norms, loss_per_iter, original_probs
+    return pert_past, new_accumulated_hidden, grad_norms, loss_per_iter, original_probs, original_word
 
 
 def get_classifier(
@@ -427,6 +429,7 @@ def full_text_generation(
         gm_scale=0.9,
         kl_scale=0.01,
         verbosity_level=REGULAR,
+        file=None,
         **kwargs
 ):
     classifier, class_id = get_classifier(
@@ -467,7 +470,8 @@ def full_text_generation(
         length=length,
         sample=sample,
         perturb=False,
-        verbosity_level=verbosity_level
+        verbosity_level=verbosity_level,
+        file=file
     )
     if device == 'cuda':
         torch.cuda.empty_cache()
@@ -500,7 +504,8 @@ def full_text_generation(
             gamma=gamma,
             gm_scale=gm_scale,
             kl_scale=kl_scale,
-            verbosity_level=verbosity_level
+            verbosity_level=verbosity_level,
+            file=file
         )
         pert_gen_tok_texts.append(pert_gen_tok_text)
         if classifier is not None:
@@ -537,7 +542,8 @@ def generate_text_pplm(
         gamma=1.5,
         gm_scale=0.9,
         kl_scale=0.01,
-        verbosity_level=REGULAR
+        verbosity_level=REGULAR,
+        file=None
 ):
     output_so_far = None
     if context:
@@ -555,6 +561,7 @@ def generate_text_pplm(
     unpert_discrim_loss = 0
     loss_in_time = []
     original_probs = None
+    original_word = None
 
     if verbosity_level >= VERBOSE:
         range_func = trange(length, ascii=True)
@@ -597,7 +604,7 @@ def generate_text_pplm(
             accumulated_hidden = torch.sum(accumulated_hidden, dim=1)
 
             if past is not None:
-                pert_past, _, grad_norms, loss_this_iter, original_probs = perturb_past(
+                pert_past, _, grad_norms, loss_this_iter, original_probs, original_word = perturb_past(
                     past,
                     model,
                     last,
@@ -691,14 +698,15 @@ def generate_text_pplm(
         if verbosity_level >= REGULAR:
             print(tokenizer.decode(output_so_far.tolist()[0]))
             if perturb:
-                str = '{}[{:.3}->{:.3}]'.format(
-                    tokenizer.decode(output_so_far.tolist()[0]),
-                    word_original_p.tolist()[0],
-                    word_perturbed_p.tolist()[0])
+                from_word = tokenizer.decode(original_word)
+                to_word = tokenizer.decode(last)
+                str = '{}【{}->{}】【{:.3}->{:.3}】'.format(
+                    tokenizer.decode(output_so_far.squeeze().tolist()),
+                    from_word, to_word,
+                    word_original_p.item(), word_perturbed_p.item()
+                )
 
-                with open('probs states', 'a') as f:
-                    f.write(str + '\n')
-
+                file.write(str + '\n')
 
     return output_so_far, unpert_discrim_loss, loss_in_time
 
@@ -743,7 +751,8 @@ def run_pplm_example(
         seed=0,
         no_cuda=False,
         colorama=False,
-        verbosity='regular'
+        verbosity='regular',
+        file=None
 ):
     # set Random seed
     torch.manual_seed(seed)
@@ -829,7 +838,8 @@ def run_pplm_example(
         gamma=gamma,
         gm_scale=gm_scale,
         kl_scale=kl_scale,
-        verbosity_level=verbosity_level
+        verbosity_level=verbosity_level,
+        file=file
     )
 
     # untokenize unperturbed text
