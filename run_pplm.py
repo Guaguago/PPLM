@@ -44,6 +44,17 @@ PPLM_BOW_DISCRIM = 3
 SMALL_CONST = 1e-15
 BIG_CONST = 1e10
 
+UNPERTURBED = 0
+PERTURBED = 1
+BASELINE_VAD = 2
+BASELINE_VAD_ABS = 3
+GENERATION_METHODS = {
+    'unperturbed': UNPERTURBED,
+    'perturbed': PERTURBED,
+    'vad': BASELINE_VAD,
+    'vad_abs': BASELINE_VAD_ABS,
+}
+
 QUIET = 0
 REGULAR = 1
 VERBOSE = 2
@@ -430,6 +441,7 @@ def full_text_generation(
         kl_scale=0.01,
         verbosity_level=REGULAR,
         file=None,
+        generation_method=PERTURBED,
         **kwargs
 ):
     classifier, class_id = get_classifier(
@@ -469,7 +481,7 @@ def full_text_generation(
         device=device,
         length=length,
         sample=sample,
-        perturb=False,
+        generation_method=UNPERTURBED,
         verbosity_level=verbosity_level,
         file=file
     )
@@ -486,7 +498,7 @@ def full_text_generation(
             tokenizer=tokenizer,
             context=context,
             device=device,
-            perturb=True,
+            generation_method=generation_method,
             bow_indices=bow_indices,
             classifier=classifier,
             class_label=class_id,
@@ -505,7 +517,7 @@ def full_text_generation(
             gm_scale=gm_scale,
             kl_scale=kl_scale,
             verbosity_level=verbosity_level,
-            file=file
+            file=file,
         )
         pert_gen_tok_texts.append(pert_gen_tok_text)
         if classifier is not None:
@@ -524,7 +536,7 @@ def generate_text_pplm(
         context=None,
         past=None,
         device="cuda",
-        perturb=True,
+        generation_method=PERTURBED,
         bow_indices=None,
         classifier=None,
         class_label=None,
@@ -545,6 +557,10 @@ def generate_text_pplm(
         verbosity_level=REGULAR,
         file=None
 ):
+    if generation_method >= BASELINE_VAD:
+        import pandas as pd
+        vad_words = pd.read_csv("/Users/xuchen/core/pycharm/project/PPL/data/NRC-VAD-Lexicon.txt", sep='\t',
+                                index_col='Word')
     output_so_far = None
     if context:
         context_t = torch.tensor(context, device=device, dtype=torch.long)
@@ -594,7 +610,7 @@ def generate_text_pplm(
             current_stepsize = stepsize
 
         # modify the past if necessary
-        if not perturb or num_iterations == 0:
+        if generation_method == UNPERTURBED or num_iterations == 0:
             pert_past = past
             # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
 
@@ -655,7 +671,7 @@ def generate_text_pplm(
             unpert_discrim_loss = 0
 
         # Fuse the modified model and original model
-        if perturb:
+        if generation_method > UNPERTURBED:
 
             unpert_probs = F.softmax(unpert_logits[:, -1, :], dim=-1)
 
@@ -681,9 +697,13 @@ def generate_text_pplm(
             def get_word_prob(probs, idx):
                 return probs[idx]
 
-            if perturb:
+            if generation_method > UNPERTURBED:
                 word_original_p = get_word_prob(original_probs[0], last[0])
                 word_perturbed_p = get_word_prob(pert_probs[0], last[0])
+
+                if generation_method >= BASELINE_VAD:
+                    if keep(tokenizer.decode(last.item()), tokenizer.decode(original_word.item()), vad_words):
+                        last = original_word
 
 
 
@@ -697,7 +717,7 @@ def generate_text_pplm(
         )  # shape of output_so_far: (batch_size, seq_len)
         if verbosity_level >= REGULAR:
             print(tokenizer.decode(output_so_far.tolist()[0]))
-            if perturb:
+            if generation_method > UNPERTURBED:
                 from_word = tokenizer.decode(original_word)
                 to_word = tokenizer.decode(last)
                 str = '{}【{}->{}】【{:.3}->{:.3}】'.format(
@@ -709,6 +729,19 @@ def generate_text_pplm(
                 file.write(str + '\n')
 
     return output_so_far, unpert_discrim_loss, loss_in_time
+
+
+def keep(last, original, vad_words):
+    is_kept = True
+    last = last.strip()
+    original = original.strip()
+    vad_vocab = vad_words.index
+    last_v = vad_words.loc[last]['Valence'] if last in vad_vocab else 0.5
+    original_v = vad_words.loc[original]['Valence'] if original in vad_vocab else 0.5
+    change = last_v - original_v
+    if abs(change) > 0.05:
+        is_kept = False
+    return is_kept
 
 
 def set_generic_model_params(discrim_weights, discrim_meta):
@@ -752,7 +785,8 @@ def run_pplm_example(
         no_cuda=False,
         colorama=False,
         verbosity='regular',
-        file=None
+        file=None,
+        generation_method='perturbed'
 ):
     # set Random seed
     torch.manual_seed(seed)
@@ -760,6 +794,9 @@ def run_pplm_example(
 
     # set verbosiry
     verbosity_level = VERBOSITY_LEVELS.get(verbosity.lower(), REGULAR)
+
+    # set generation method
+    generation_method = GENERATION_METHODS.get(generation_method.lower(), PERTURBED)
 
     # set the device
     device = "cuda" if torch.cuda.is_available() and not no_cuda else "cpu"
@@ -839,7 +876,8 @@ def run_pplm_example(
         gm_scale=gm_scale,
         kl_scale=kl_scale,
         verbosity_level=verbosity_level,
-        file=file
+        file=file,
+        generation_method=generation_method
     )
 
     # untokenize unperturbed text
