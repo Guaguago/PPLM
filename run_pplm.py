@@ -221,11 +221,6 @@ def perturb_past(
         logits = all_logits[:, -1, :]
         probs = F.softmax(logits, dim=-1)
 
-        # tag original probs
-        if i == 0:
-            original_probs = probs
-            original_word = torch.multinomial(original_probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
-
         loss = 0.0
         loss_list = []
         if loss_type == PPLM_BOW or loss_type == PPLM_BOW_DISCRIM:
@@ -330,7 +325,7 @@ def perturb_past(
     ]
     pert_past = list(map(add, past, grad_accumulator))
 
-    return pert_past, new_accumulated_hidden, grad_norms, loss_per_iter, original_probs, original_word
+    return pert_past, new_accumulated_hidden, grad_norms, loss_per_iter
 
 
 def get_classifier(
@@ -557,6 +552,7 @@ def generate_text_pplm(
         verbosity_level=REGULAR,
         file=None
 ):
+    vad_words = None
     if generation_method >= BASELINE_VAD:
         import pandas as pd
         vad_words = pd.read_csv("/Users/xuchen/core/pycharm/project/PPL/data/NRC-VAD-Lexicon.txt", sep='\t',
@@ -576,8 +572,6 @@ def generate_text_pplm(
     last = None
     unpert_discrim_loss = 0
     loss_in_time = []
-    original_probs = None
-    original_word = None
 
     if verbosity_level >= VERBOSE:
         range_func = trange(length, ascii=True)
@@ -620,7 +614,7 @@ def generate_text_pplm(
             accumulated_hidden = torch.sum(accumulated_hidden, dim=1)
 
             if past is not None:
-                pert_past, _, grad_norms, loss_this_iter, original_probs, original_word = perturb_past(
+                pert_past, _, grad_norms, loss_this_iter = perturb_past(
                     past,
                     model,
                     last,
@@ -646,15 +640,14 @@ def generate_text_pplm(
             else:
                 pert_past = past
 
-        # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
+            # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
         pert_logits, past, pert_all_hidden = model(last, past=pert_past)  # update past
-        # shape of pert_logits: (batch_size, seq_len=1, vocab_size)
+            # shape of pert_logits: (batch_size, seq_len=1, vocab_size)
 
         pert_logits = pert_logits[:, -1, :] / temperature  # + SMALL_CONST
-        # shape of pert_logits: (batch_size, vocab_size)
+            # shape of pert_logits: (batch_size, vocab_size)
         pert_probs = F.softmax(pert_logits, dim=-1)
-
-        # shape of pert_probs: (batch_size=1, vocab_size)
+            # shape of pert_probs: (batch_size=1, vocab_size)
 
         if classifier is not None:
             ce_loss = torch.nn.CrossEntropyLoss()
@@ -670,8 +663,11 @@ def generate_text_pplm(
         else:
             unpert_discrim_loss = 0
 
+        unpert_probs = None
+        unpert_last = None
+
         # Fuse the modified model and original model
-        if generation_method > UNPERTURBED:
+        if generation_method >= PERTURBED:
 
             unpert_probs = F.softmax(unpert_logits[:, -1, :], dim=-1)
 
@@ -684,31 +680,27 @@ def generate_text_pplm(
             if torch.sum(pert_probs) <= 1:
                 pert_probs = pert_probs / torch.sum(pert_probs)
 
+            # used to print unpert_last
+            unpert_logits = unpert_logits[:, -1, :]
+            unpert_logits = top_k_filter(unpert_logits, k=top_k)  # + SMALL_CONST
+            unpert_probs = F.softmax(unpert_logits, dim=-1)
+            unpert_last = decode(unpert_probs, sample)
+
         else:
             pert_logits = top_k_filter(pert_logits, k=top_k)  # + SMALL_CONST
             # shape of pert_logits: (batch_size, vocab_size)
             pert_probs = F.softmax(pert_logits, dim=-1)
 
-        # sample or greedy
-        if sample:
-            # shape of pert_probs: (batch_size, vocab_size)
-            last = torch.multinomial(pert_probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
+        last = decode(pert_probs, sample)
 
-            def get_word_prob(probs, idx):
-                return probs[idx]
+        if generation_method >= BASELINE_VAD:
+            is_kept, last_v, unpert_last_v = keep(
+                tokenizer.decode(last.item()),
+                tokenizer.decode(unpert_last.item()),
+                vad_words)
+            if is_kept:
+                last = unpert_last
 
-            if generation_method > UNPERTURBED:
-                word_original_p = get_word_prob(original_probs[0], last[0])
-                word_perturbed_p = get_word_prob(pert_probs[0], last[0])
-
-                if generation_method >= BASELINE_VAD:
-                    if keep(tokenizer.decode(last.item()), tokenizer.decode(original_word.item()), vad_words):
-                        last = original_word
-
-
-
-        else:
-            _, last = torch.topk(pert_probs, k=1, dim=-1)
 
         # update context/output_so_far appending the new token
         output_so_far = (
@@ -717,31 +709,50 @@ def generate_text_pplm(
         )  # shape of output_so_far: (batch_size, seq_len)
         if verbosity_level >= REGULAR:
             print(tokenizer.decode(output_so_far.tolist()[0]))
-            if generation_method > UNPERTURBED:
-                from_word = tokenizer.decode(original_word)
-                to_word = tokenizer.decode(last)
-                str = '{}【{}->{}】【{:.3}->{:.3}】'.format(
-                    tokenizer.decode(output_so_far.squeeze().tolist()),
-                    from_word, to_word,
-                    word_original_p.item(), word_perturbed_p.item()
-                )
 
-                file.write(str + '\n')
+        # log outputs
+        if generation_method >= PERTURBED:
+            unpert_prob = unpert_probs.squeeze()[unpert_last.item()].item()
+            unpert_last_word = tokenizer.decode(unpert_last.item()).strip()
+            pert_prob = pert_probs.squeeze()[last.item()].item()
+            last_word = tokenizer.decode(last.item()).strip()
+
+            if generation_method == PERTURBED:
+                sequence = '{}【{}=>{}({:.3}=>{:.3})】'.format(
+                    tokenizer.decode(output_so_far.squeeze().tolist()),
+                    unpert_last_word, last_word,
+                    unpert_prob, pert_prob
+                )
+                file.write(sequence + '\n')
+
+            elif generation_method >= BASELINE_VAD:
+                pass
 
     return output_so_far, unpert_discrim_loss, loss_in_time
 
 
-def keep(last, original, vad_words):
+def decode(probs, sample=True):
+    # sample or greedy
+    if sample:
+        # shape of pert_probs: (batch_size, vocab_size)
+        last = torch.multinomial(probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
+        # unpert_last = torch.multinomial(unpert_probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
+    else:
+        _, last = torch.topk(probs, k=1, dim=-1)
+    return last
+
+
+def keep(last, unpert_last, vad_words):
     is_kept = True
-    last = last.strip()
-    original = original.strip()
+    last, unpert_last = last.strip(), unpert_last.strip()
     vad_vocab = vad_words.index
     last_v = vad_words.loc[last]['Valence'] if last in vad_vocab else 0.5
-    original_v = vad_words.loc[original]['Valence'] if original in vad_vocab else 0.5
-    change = last_v - original_v
-    if abs(change) > 0.05:
+    unpert_last_v = vad_words.loc[unpert_last]['Valence'] if unpert_last in vad_vocab else 0.5
+    change = abs(last_v - unpert_last_v)
+    if change > 0.05:
         is_kept = False
-    return is_kept
+    return is_kept, last_v, unpert_last_v
+
 
 
 def set_generic_model_params(discrim_weights, discrim_meta):
