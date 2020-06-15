@@ -642,12 +642,12 @@ def generate_text_pplm(
 
             # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
         pert_logits, past, pert_all_hidden = model(last, past=pert_past)  # update past
-            # shape of pert_logits: (batch_size, seq_len=1, vocab_size)
+        # shape of pert_logits: (batch_size, seq_len=1, vocab_size)
 
         pert_logits = pert_logits[:, -1, :] / temperature  # + SMALL_CONST
-            # shape of pert_logits: (batch_size, vocab_size)
+        # shape of pert_logits: (batch_size, vocab_size)
         pert_probs = F.softmax(pert_logits, dim=-1)
-            # shape of pert_probs: (batch_size=1, vocab_size)
+        # shape of pert_probs: (batch_size=1, vocab_size)
 
         if classifier is not None:
             ce_loss = torch.nn.CrossEntropyLoss()
@@ -693,14 +693,20 @@ def generate_text_pplm(
 
         last = decode(pert_probs, sample)
 
-        if generation_method >= BASELINE_VAD:
-            is_kept, last_v, unpert_last_v = keep(
-                tokenizer.decode(last.item()),
-                tokenizer.decode(unpert_last.item()),
-                vad_words)
-            if is_kept:
-                last = unpert_last
+        # last may be assigned to unpert_last after vad check
+        pert_last = last
 
+        # VAD check
+        is_unpert_last_kept = True
+        pert_last_v, unpert_last_v = None, None
+        if generation_method >= BASELINE_VAD:
+            is_unpert_last_kept, pert_last_v, unpert_last_v = keep(
+                tokenizer.decode(pert_last.item()),
+                tokenizer.decode(unpert_last.item()),
+                vad_words,
+                generation_method)
+            if is_unpert_last_kept:
+                last = unpert_last
 
         # update context/output_so_far appending the new token
         output_so_far = (
@@ -712,21 +718,32 @@ def generate_text_pplm(
 
         # log outputs
         if generation_method >= PERTURBED:
-            unpert_prob = unpert_probs.squeeze()[unpert_last.item()].item()
+            # dist change of the same word
+            unpert_prob = unpert_probs.squeeze()[pert_last.item()].item()
+            pert_prob = pert_probs.squeeze()[pert_last.item()].item()
+
+            # word change
             unpert_last_word = tokenizer.decode(unpert_last.item()).strip()
-            pert_prob = pert_probs.squeeze()[last.item()].item()
-            last_word = tokenizer.decode(last.item()).strip()
+            pert_last_word = tokenizer.decode(pert_last.item()).strip()
 
-            if generation_method == PERTURBED:
-                sequence = '{}【{}=>{}({:.3}=>{:.3})】'.format(
-                    tokenizer.decode(output_so_far.squeeze().tolist()),
-                    unpert_last_word, last_word,
-                    unpert_prob, pert_prob
-                )
-                file.write(sequence + '\n')
+            if verbosity_level >= REGULAR:
+                if generation_method == PERTURBED:
+                    sequence = '【{}】【w({}->{}), d({:.3}->{:.3})】'.format(
+                        tokenizer.decode(output_so_far.squeeze().tolist()),
+                        unpert_last_word, pert_last_word,
+                        unpert_prob, pert_prob
+                    )
+                    file.write(sequence + '\n')
 
-            elif generation_method >= BASELINE_VAD:
-                pass
+                elif generation_method >= BASELINE_VAD:
+                    sequence = '【{}】【w({}->{}{}), v({:.3}->{:.3}), d({:.3}->{:.3})】'.format(
+                        tokenizer.decode(output_so_far.squeeze().tolist()),
+                        unpert_last_word, pert_last_word,
+                        '->' + unpert_last_word if is_unpert_last_kept else '',  # just last
+                        unpert_last_v, pert_last_v,
+                        unpert_prob, pert_prob,
+                    )
+                    file.write(sequence + '\n')
 
     return output_so_far, unpert_discrim_loss, loss_in_time
 
@@ -742,17 +759,18 @@ def decode(probs, sample=True):
     return last
 
 
-def keep(last, unpert_last, vad_words):
-    is_kept = True
-    last, unpert_last = last.strip(), unpert_last.strip()
+def keep(pert_last, unpert_last, vad_words, generation_method):
+    is_unpert_last_kept = True
+    pert_last, unpert_last = pert_last.strip(), unpert_last.strip()
     vad_vocab = vad_words.index
-    last_v = vad_words.loc[last]['Valence'] if last in vad_vocab else 0.5
+    pert_last_v = vad_words.loc[pert_last]['Valence'] if pert_last in vad_vocab else 0.5
     unpert_last_v = vad_words.loc[unpert_last]['Valence'] if unpert_last in vad_vocab else 0.5
-    change = abs(last_v - unpert_last_v)
+    change = pert_last_v - unpert_last_v
+    if generation_method == BASELINE_VAD_ABS:
+        change = abs(change)
     if change > 0.05:
-        is_kept = False
-    return is_kept, last_v, unpert_last_v
-
+        is_unpert_last_kept = False
+    return is_unpert_last_kept, pert_last_v, unpert_last_v
 
 
 def set_generic_model_params(discrim_weights, discrim_meta):
@@ -797,7 +815,7 @@ def run_pplm_example(
         colorama=False,
         verbosity='regular',
         file=None,
-        generation_method='perturbed'
+        sample_method='perturbed'
 ):
     # set Random seed
     torch.manual_seed(seed)
@@ -807,7 +825,7 @@ def run_pplm_example(
     verbosity_level = VERBOSITY_LEVELS.get(verbosity.lower(), REGULAR)
 
     # set generation method
-    generation_method = GENERATION_METHODS.get(generation_method.lower(), PERTURBED)
+    generation_method = GENERATION_METHODS.get(sample_method.lower(), PERTURBED)
 
     # set the device
     device = "cuda" if torch.cuda.is_available() and not no_cuda else "cpu"
@@ -935,6 +953,10 @@ def run_pplm_example(
             print("= Perturbed generated text {} =".format(i + 1))
             print(pert_gen_text)
             print()
+
+            if verbosity_level == QUIET:
+                file.write(pert_gen_text)
+
         except:
             pass
 
