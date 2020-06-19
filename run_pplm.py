@@ -821,7 +821,7 @@ def run_pplm_example(
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    # set verbosiry
+    # set verbosity
     verbosity_level = VERBOSITY_LEVELS.get(verbosity.lower(), REGULAR)
 
     # set generation method
