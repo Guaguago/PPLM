@@ -76,21 +76,33 @@ def ppl_scores(topic, src_dir):
 
 
 if __name__ == '__main__':
-    src_dir = '../automated_evaluation'
+    src_dir = '../../automated_evaluation'
     file_info = [
-        'computers.csv',
+        # 'computers.csv',
         # 'legal.csv',
         # 'military.csv',
         # 'politics.csv',
         # 'religion.csv',
         # 'science.csv',
         # 'space.csv',
+        'positive.csv',
         # 'negative.csv',
-        # 'positive.csv',
         # 'clickbait.csv'
     ]
     topic = file_info[0][:-4]
     # tokenizer.special_tokens['sos'] = '<|endoftext|>'
     # ppl_scores(topic, src_dir)
-    print(score_trans('<|endoftext|>I love it'))
+
+    # file_pos = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/vad/samples/positive/BC'
+    # file_pos = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/positive/BC'
+    file_neg = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/vad_abs/samples/negative/BC'
+    # file_neg = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/negative/BC'
+    samples = None
+    with open(file_neg, 'r') as f:
+        samples = f.read().split('<|endoftext|>')
+        samples = [s for s in samples if len(s.split()) > 20]
+    scores = [score_py(s) for s in samples]
+    import statistics as stat
+
+    print(stat.mean(scores))
     # print(score_trans('<|endoftext|> I love it'))

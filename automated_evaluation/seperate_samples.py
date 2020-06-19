@@ -254,22 +254,28 @@ def seperate_samples(topic, src_dir, dst_dir):
 
 
 def write_to_files(variants, topic, dst_dir):
-    method_labels = ['baseline (B)', 'gradient (BC)', 'baseline+reranking (BR)', 'gradient+reranking (BCR)']
+    # method_labels = ['baseline (B)', 'gradient (BC)', 'baseline+reranking (BR)', 'gradient+reranking (BCR)']
+    method_labels = ['B', 'BC', 'BR', 'BCR']
     ppl_scores, dist_scores = [], []
-    for i in range(len(variants)):
-        from utils.ppl_scores import score_py, score_trans
-        from utils.dist_scores import eval_distinct
-        import statistics as stat
-        # ppl_scores.append(stat.mean([score_trans(s) for s in variants[i]]))
-        ppl_scores.append(stat.mean([score_py(s[13:]) for s in variants[i]]))
-        dist_scores.append(eval_distinct(variants[i], 1))
+    for i, variant in enumerate(variants):
+        if topic == 'BC' or 'BC':
+            label = method_labels[i]
+            with open('../../automated_evaluation/{}/{}'.format(topic, label), 'w') as f:
+                [f.write('<|endoftext|>' + s) for s in variant]
 
-    print(topic)
-    print('ppl, dist-1')
-    print('  B:{} {}'.format(ppl_scores[0], dist_scores[0]))
-    print(' BR:{} {}'.format(ppl_scores[2], dist_scores[2]))
-    print(' BC:{} {}'.format(ppl_scores[1], dist_scores[1]))
-    print('BCR:{} {}'.format(ppl_scores[3], dist_scores[3]))
+        # from test.utils.ppl_scores import score_py
+        # from test.utils.dist_scores import eval_distinct
+        # import statistics as stat
+        # # ppl_scores.append(stat.mean([score_trans(s) for s in variants[i]]))
+        # ppl_scores.append(stat.mean([score_py(s[13:]) for s in variants[i]]))
+        # dist_scores.append(eval_distinct(variants[i], 1))
+
+    # print(topic)
+    # print('ppl, dist-1')
+    # print('  B:{} {}'.format(ppl_scores[0], dist_scores[0]))
+    # print(' BR:{} {}'.format(ppl_scores[2], dist_scores[2]))
+    # print(' BC:{} {}'.format(ppl_scores[1], dist_scores[1]))
+    # print('BCR:{} {}'.format(ppl_scores[3], dist_scores[3]))
 
     # for j, item in enumerate(variants[i]):
     #     from copy_ppl import score_py
@@ -283,18 +289,18 @@ def write_to_files(variants, topic, dst_dir):
 
 
 if __name__ == '__main__':
-    src_dir = '../human_annotation/pplm_labeled_csvs/'
-    dst_dir = '../automated_evaluation/'
+    src_dir = '../../human_annotation/pplm_labeled_csvs/'
+    dst_dir = '../../automated_evaluation/'
     file_info = [
         # 'computers.csv',
         # 'legal.csv',
         # 'military.csv',
         # 'politics.csv',
         # 'religion.csv',
-        'science.csv',
+        # 'science.csv',
         # 'space.csv',
-        # 'negative.csv',
-        # 'positive.csv',
+        # 'BC.csv',
+        'BC.csv',
         # 'clickbait.csv'
     ]
     topic = file_info[0][:-4]
