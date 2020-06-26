@@ -704,7 +704,9 @@ def generate_text_pplm(
                 tokenizer.decode(pert_last.item()),
                 tokenizer.decode(unpert_last.item()),
                 vad_words,
-                generation_method)
+                generation_method,
+                class_label
+            )
             if is_unpert_last_kept:
                 last = unpert_last
 
@@ -759,15 +761,18 @@ def decode(probs, sample=True):
     return last
 
 
-def keep(pert_last, unpert_last, vad_words, generation_method):
+def keep(pert_last, unpert_last, vad_words, generation_method, class_label):
     is_unpert_last_kept = True
     pert_last, unpert_last = pert_last.strip(), unpert_last.strip()
     vad_vocab = vad_words.index
     pert_last_v = vad_words.loc[pert_last]['Valence'] if pert_last in vad_vocab else 0.5
     unpert_last_v = vad_words.loc[unpert_last]['Valence'] if unpert_last in vad_vocab else 0.5
     change = pert_last_v - unpert_last_v
+
     if generation_method == BASELINE_VAD_ABS:
         change = abs(change)
+    if class_label == 3:
+        change = -change
     if change > 0.05:
         is_unpert_last_kept = False
     return is_unpert_last_kept, pert_last_v, unpert_last_v
@@ -815,7 +820,7 @@ def run_pplm_example(
         colorama=False,
         verbosity='regular',
         file=None,
-        sample_method='perturbed'
+        sample_method=PERTURBED
 ):
     # set Random seed
     torch.manual_seed(seed)
@@ -825,7 +830,7 @@ def run_pplm_example(
     verbosity_level = VERBOSITY_LEVELS.get(verbosity.lower(), REGULAR)
 
     # set generation method
-    generation_method = GENERATION_METHODS.get(sample_method.lower(), PERTURBED)
+    generation_method = GENERATION_METHODS.get(sample_method, PERTURBED)
 
     # set the device
     device = "cuda" if torch.cuda.is_available() and not no_cuda else "cpu"
@@ -1056,4 +1061,23 @@ if __name__ == '__main__':
                         help="verbosiry level")
 
     args = parser.parse_args()
-    run_pplm_example(**vars(args))
+    # run_pplm_example(**vars(args))
+
+    with open('lalalalalala', 'a') as file:
+        run_pplm_example(
+            cond_text='Once upon a time',
+            num_samples=3,
+            discrim='sentiment',
+            # class_label=10,
+            class_label=3,
+            length=50,  # influence random
+            seed=0,
+            stepsize=0.05,
+            sample=True,
+            num_iterations=3,
+            gamma=1,
+            gm_scale=0.9,
+            kl_scale=0.02,
+            verbosity='regular',
+            file=file
+        )
