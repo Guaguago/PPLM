@@ -684,7 +684,7 @@ def generate_text_pplm(
             unpert_logits = unpert_logits[:, -1, :]
             unpert_logits = top_k_filter(unpert_logits, k=top_k)  # + SMALL_CONST
             unpert_probs = F.softmax(unpert_logits, dim=-1)
-            unpert_last = decode(unpert_probs, sample)
+            unpert_last = decode(unpert_probs, False)
 
         else:
             pert_logits = top_k_filter(pert_logits, k=top_k)  # + SMALL_CONST
@@ -755,7 +755,6 @@ def decode(probs, sample=True):
     if sample:
         # shape of pert_probs: (batch_size, vocab_size)
         last = torch.multinomial(probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
-        # unpert_last = torch.multinomial(unpert_probs, num_samples=1)  # shape of last: (batch_size, seq_len=1)
     else:
         _, last = torch.topk(probs, k=1, dim=-1)
     return last
