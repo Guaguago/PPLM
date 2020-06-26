@@ -21,6 +21,6 @@ if __name__ == '__main__':
                 kl_scale=0.01,
                 verbosity='regular',
                 file=file,
-                generation_method='vad'
+                generation_method='vad_abs'
 
             )

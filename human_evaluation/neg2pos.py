@@ -3,23 +3,23 @@ from run_pplm import run_pplm_example
 if __name__ == '__main__':
 
     # Set inputs
-    prefix = 'My father died'
+    prefix = 'The horse'
     sample_methods = [
         'perturbed',
-        'vad',
-        'vad_abs'
+        # 'vad_abs',
+        # 'vad_abs'
     ]
 
     with open('demos/neg2pos', 'a') as file:
         for m in sample_methods:
             file.write(
-                '\n================= "{}" to positive by {}) =================\n'.format(prefix, m))
+                '\n================= "{}" to BC by {}) =================\n'.format(prefix, m))
             run_pplm_example(
                 cond_text=prefix,
                 num_samples=1,
                 discrim='sentiment',
                 class_label='very_positive',
-                length=100,  # influence random
+                length=50,  # influence random
                 seed=0,
                 stepsize=0.05,
                 sample=True,
@@ -31,3 +31,5 @@ if __name__ == '__main__':
                 file=file,
                 sample_method=m
             )
+
+            file.write('=' * 89)
