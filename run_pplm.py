@@ -849,11 +849,9 @@ def run_pplm_example(
 
     # load pretrained model
     model = GPT2LMHeadModel.from_pretrained(
-        # pretrained_model,
-        'saved_model',
+        pretrained_model,
         output_hidden_states=True  # passed to model's __init__ method
     )
-    # model.save_pretrained('saved_model')
     model.to(device)
     model.eval()
 
