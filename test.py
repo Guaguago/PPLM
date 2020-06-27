@@ -53,5 +53,30 @@ class TestMethods(unittest.TestCase):
             known_output = file.read()
         self.assertEqual(output, known_output)
 
+    def test_BC_VAD_ABS_untached(self):
+        with open('test_cases/BC_VAD_ABS/output', 'w') as file:
+            run_pplm_example(
+                cond_text='The book',
+                num_samples=1,
+                discrim='sentiment',
+                class_label=3,  # very_negative
+                length=5,  # influence random
+                seed=0,
+                stepsize=0.05,
+                sample=True,
+                num_iterations=3,
+                gamma=1,
+                gm_scale=0.9,
+                kl_scale=0.02,
+                verbosity='quiet',
+                file=file,
+                sample_method='BC_VAD_ABS'
+            )
+        with open('test_cases/BC_VAD_ABS/output', 'r') as file:
+            output = file.read()
+        with open('test_cases/BC_VAD_ABS/known_output', 'r') as file:
+            known_output = file.read()
+        self.assertEqual(output, known_output)
+
 
 unittest.main()

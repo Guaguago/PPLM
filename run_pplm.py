@@ -768,12 +768,12 @@ def keep(pert_last, unpert_last, vad_words, generation_method, class_label):
     unpert_last_v = vad_words.loc[unpert_last]['Valence'] if unpert_last in vad_vocab else 0.5
     change = pert_last_v - unpert_last_v
 
-    if generation_method == BASELINE_VAD_ABS:
-        change = abs(change)
     if class_label == 3:
         change = -change
+    if generation_method == BASELINE_VAD_ABS:
+        change = abs(change)
     if change > 0.05:
-        is_unpert_last_kept = False
+        is_unpert_last_kept = False  # change!
     return is_unpert_last_kept, pert_last_v, unpert_last_v
 
 
