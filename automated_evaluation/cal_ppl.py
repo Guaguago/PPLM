@@ -1,6 +1,6 @@
 import math
 import torch
-import statistics
+import statistics as stat
 
 # from transformers import OpenAIGPTTokenizer, OpenAIGPTLMHeadModel
 
@@ -70,7 +70,7 @@ def ppl_scores(topic, src_dir):
         for s in samples:
             scores.append(score_trans(s))
         # print(scores)
-        print('{}: {}'.format(labels[l], statistics.mean(scores)))
+        print('{}: {}'.format(labels[l], stat.mean(scores)))
 
         # print('{}: {}'.format(labels[l], statistics.mean([score(s) for s in lines])))
 
@@ -90,19 +90,22 @@ if __name__ == '__main__':
         # 'clickbait.csv'
     ]
     topic = file_info[0][:-4]
-    # tokenizer.special_tokens['sos'] = '<|endoftext|>'
-    # ppl_scores(topic, src_dir)
 
-    # file_pos = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/vad/samples/positive/BC'
-    # file_pos = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/positive/BC'
-    file_neg = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/vad_abs/samples/negative/BC'
-    # file_neg = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/negative/BC'
-    samples = None
-    with open(file_neg, 'r') as f:
+    SRC = 'generated_samples'
+    # SRC = 'provided_samples'
+    # single
+    sentiment_label = [
+        # 'positive',
+        'negative'
+    ]
+    sample_methods = [
+        # 'BC',
+        'BC_VAD',
+        # 'BC_VAD_ABS'
+    ]
+    src = '{}/{}/{}'.format(SRC, sentiment_label[0], sample_methods[0])
+    with open(src, 'r') as f:
         samples = f.read().split('<|endoftext|>')
         samples = [s for s in samples if len(s.split()) > 20]
     scores = [score_py(s) for s in samples]
-    import statistics as stat
-
     print(stat.mean(scores))
-    # print(score_trans('<|endoftext|> I love it'))
