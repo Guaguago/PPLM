@@ -4,8 +4,8 @@ from run_pplm import run_pplm_example
 def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose, seed=0):
     for method_name in sample_methods:
         output = '{}/{}'.format(sentiment_label, method_name)
-        with open(output, 'a') as file:
-            for prefix in prefixes:
+        for prefix in prefixes:
+            with open(output, 'a') as file:
                 run_pplm_example(
                     cond_text=prefix,
                     num_samples=3,
@@ -24,7 +24,7 @@ def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose,
                     sample_method=method_name
                 )
 
-            # file.write('=' * 89)
+        # file.write('=' * 89)
 
 
 if __name__ == '__main__':
@@ -35,15 +35,15 @@ if __name__ == '__main__':
 
     # single
     sentiment_label = [
-        # 'positive',
-        'negative'
+        'positive',
+        # 'negative'
     ]
 
     # multiple
     sample_methods = [
         # 'BC',
-        'BC_VAD',
-        # 'BC_VAD_ABS'
+        # 'BC_VAD',
+        'BC_VAD_ABS'
     ]
 
-    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'regular', seed=1)
+    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'quiet', seed=1)
