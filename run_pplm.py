@@ -847,6 +847,9 @@ def run_pplm_example(
                 print("discrim = {}, pretrained_model set "
                       "to discriminator's = {}".format(discrim, pretrained_model))
 
+    import logging
+    logging.basicConfig(level=logging.INFO)
+
     # load pretrained model
     model = GPT2LMHeadModel.from_pretrained(
         pretrained_model,
