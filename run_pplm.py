@@ -555,7 +555,7 @@ def generate_text_pplm(
     vad_words = None
     if generation_method >= BASELINE_VAD:
         import pandas as pd
-        vad_words = pd.read_csv("/Users/xuchen/core/pycharm/project/PPL/data/NRC-VAD-Lexicon.txt", sep='\t',
+        vad_words = pd.read_csv("data/NRC-VAD-Lexicon.txt", sep='\t',
                                 index_col='Word')
     output_so_far = None
     if context:
