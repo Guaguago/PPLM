@@ -1,9 +1,9 @@
 from run_pplm import run_pplm_example
 
 
-def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose, seed=0):
+def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose, suffix, seed=0):
     for method_name in sample_methods:
-        output = '{}/{}({})'.format(sentiment_label, method_name, seed)
+        output = '{}/{}{}'.format(sentiment_label, method_name, suffix)
         for prefix in prefixes:
             with open(output, 'a') as file:
                 run_pplm_example(
@@ -48,5 +48,6 @@ if __name__ == '__main__':
         # 'BC_VAD_ABS'
     ]
 
+    suffix = '({}_001)'.format(SEED)
 
-    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'regular', seed=SEED)
+    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'regular', suffix, seed=SEED)
