@@ -772,7 +772,7 @@ def keep(pert_last, unpert_last, vad_words, generation_method, class_label):
         change = -change
     if generation_method == BASELINE_VAD_ABS:
         change = abs(change)
-    if change > 0.05:
+    if change > 0.01:
         is_unpert_last_kept = False  # change!
     return is_unpert_last_kept, pert_last_v, unpert_last_v
 
