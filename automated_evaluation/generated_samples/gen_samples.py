@@ -37,17 +37,18 @@ if __name__ == '__main__':
     SEED = 2
     # single
     sentiment_label = [
-        # 'positive',
-        'negative'
+        'positive',
+        # 'negative'
     ]
 
     # multiple
     sample_methods = [
-        'BC',
+        'B',
+        # 'BC',
         # 'BC_VAD',
         # 'BC_VAD_ABS'
     ]
 
-    suffix = '({}_001)'.format(SEED)
+    suffix = '(2_45_10)'
 
-    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'regular', suffix, seed=SEED)
+    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'quiet', suffix, seed=SEED)
