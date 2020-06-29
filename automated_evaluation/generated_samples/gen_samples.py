@@ -3,7 +3,7 @@ from run_pplm import run_pplm_example
 
 def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose, seed=0):
     for method_name in sample_methods:
-        output = '{}/{}'.format(sentiment_label, method_name)
+        output = '{}/{}({})'.format(sentiment_label, method_name, seed)
         for prefix in prefixes:
             with open(output, 'a') as file:
                 run_pplm_example(
@@ -13,12 +13,12 @@ def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose,
                     class_label='very_{}'.format(sentiment_label),
                     length=length,  # influence random
                     seed=seed,
-                    stepsize=0.05,
+                    stepsize=0.04,
                     sample=True,
-                    num_iterations=3,
+                    num_iterations=10,
                     gamma=1,
-                    gm_scale=0.9,
-                    kl_scale=0.02,
+                    gm_scale=0.95,
+                    kl_scale=0.01,
                     verbosity=verbose,
                     file=file,
                     sample_method=method_name
@@ -33,17 +33,20 @@ if __name__ == '__main__':
                 'The movie', 'The painting', 'The pizza', 'The potato', 'The president of the country', 'The road',
                 'The year is 1910.']
 
+
+    SEED = 2
     # single
     sentiment_label = [
-        'positive',
-        # 'negative'
+        # 'positive',
+        'negative'
     ]
 
     # multiple
     sample_methods = [
-        # 'BC',
+        'BC',
         # 'BC_VAD',
-        'BC_VAD_ABS'
+        # 'BC_VAD_ABS'
     ]
 
-    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'quiet', seed=1)
+
+    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'regular', seed=SEED)

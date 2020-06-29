@@ -53,10 +53,12 @@ def read_responses(file):
     :param file: str, file path to the dataset
     :return: list, a list of dialogue (context) contained in file
     """
-    with open(file) as f:
-        responses = [i.strip() for i in f.readlines() if len(i.strip()) != 0]
+    with open(file, 'r') as f:
+        samples = f.read().split('<|endoftext|>')
+        samples = [s.replace('<|endoftext|>', '') for s in samples if len(s.split()) > 20]
+        # responses = [i.strip() for i in f.readlines() if len(i.strip()) != 0]
     # return [json.loads(i) for i in contents]
-    return responses
+    return samples
 
 
 def count_ngram(hyps_resp, n):
@@ -117,19 +119,31 @@ def eval_distinct(hyps_resp, n):
     # , dist2, dist3
 
 
-def print_dist_scores(topic, n):
-    variants = ['B', 'BR', 'BC', 'BCR']
-    locations = ['automated_evaluation/{}/baseline (B)'.format(topic),
-                 'automated_evaluation/{}/baseline+reranking (BR)'.format(topic),
-                 'automated_evaluation/{}/gradient (BC)'.format(topic),
-                 'automated_evaluation/{}/gradient+reranking (BCR)'.format(topic)]
-    print('{} distinct-{}:'.format(topic, n))
+def print_dist_scores(sentiment_label, sample_method, n):
+    # variants = ['B', 'BR', 'BC', 'BCR']
+    # locations = ['automated_evaluation/{}/baseline (B)'.format(topic),
+    #              'automated_evaluation/{}/baseline+reranking (BR)'.format(topic),
+    #              'automated_evaluation/{}/gradient (BC)'.format(topic),
+    #              'automated_evaluation/{}/gradient+reranking (BCR)'.format(topic)]
+    # print('{} distinct-{}:'.format(topic, n))
 
-    for i in range(len(variants)):
-        responses = read_responses(locations[i])
-        outputs = eval_distinct(responses, n)
-        print(outputs)
+    # for i in range(len(variants)):
+    src = 'generated_samples/{}/{}'.format(sentiment_label, sample_method)
+    responses = read_responses(src)
+    outputs = eval_distinct(responses, n)
+    print(outputs)
 
 
 if __name__ == '__main__':
-    print_dist_scores('religion', 2)
+    sentiment_label = [
+        # 'positive',
+        'negative'
+    ]
+
+    # multiple
+    sample_methods = [
+        # 'BC',
+        'BC_VAD',
+        # 'BC_VAD_ABS'
+    ]
+    print_dist_scores(sentiment_label[0], sample_methods[0], 1)

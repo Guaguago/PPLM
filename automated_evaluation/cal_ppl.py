@@ -95,12 +95,12 @@ if __name__ == '__main__':
     # SRC = 'provided_samples'
     # single
     sentiment_label = [
-        # 'positive',
-        'negative'
+        'positive',
+        # 'negative'
     ]
     sample_methods = [
-        # 'BC',
-        'BC_VAD',
+        'BC',
+        # 'BC_VAD',
         # 'BC_VAD_ABS'
     ]
     src = '{}/{}/{}'.format(SRC, sentiment_label[0], sample_methods[0])
