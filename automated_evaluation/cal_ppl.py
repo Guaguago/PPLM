@@ -103,9 +103,22 @@ if __name__ == '__main__':
         # 'BC_VAD',
         # 'BC_VAD_ABS'
     ]
-    src = '{}/{}/{}'.format(SRC, sentiment_label[0], sample_methods[0])
+
+    suffix = '(2_45_10)'
+
+    src = '{}/{}/{}{}'.format(SRC, 'positive', sample_methods[0], suffix)
     with open(src, 'r') as f:
         samples = f.read().split('<|endoftext|>')
-        samples = [s for s in samples if len(s.split()) > 20]
+        samples = samples[1:]
     scores = [score_py(s) for s in samples]
-    print(stat.mean(scores))
+    pos_ppl = stat.mean(scores)
+    print('pos: {}'.format(pos_ppl))
+
+    src = '{}/{}/{}{}'.format(SRC, 'negative', sample_methods[0], suffix)
+    with open(src, 'r') as f:
+        samples = f.read().split('<|endoftext|>')
+        samples = samples[1:]
+    scores = [score_py(s) for s in samples]
+    neg_ppl = stat.mean(scores)
+    print('neg: {}'.format(neg_ppl))
+    print('mean: {}'.format((pos_ppl + neg_ppl) / 2))
