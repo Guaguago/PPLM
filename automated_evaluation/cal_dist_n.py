@@ -55,7 +55,7 @@ def read_responses(file):
     """
     with open(file, 'r') as f:
         samples = f.read().split('<|endoftext|>')
-        samples = [s.replace('<|endoftext|>', '') for s in samples if len(s.split()) > 20]
+        samples = samples[1:]  # responses = [i.strip() for i in f.readlines() if len(i.strip()) != 0]
         # responses = [i.strip() for i in f.readlines() if len(i.strip()) != 0]
     # return [json.loads(i) for i in contents]
     return samples
@@ -119,31 +119,30 @@ def eval_distinct(hyps_resp, n):
     # , dist2, dist3
 
 
-def print_dist_scores(sentiment_label, sample_method, n):
-    # variants = ['B', 'BR', 'BC', 'BCR']
-    # locations = ['automated_evaluation/{}/baseline (B)'.format(topic),
-    #              'automated_evaluation/{}/baseline+reranking (BR)'.format(topic),
-    #              'automated_evaluation/{}/gradient (BC)'.format(topic),
-    #              'automated_evaluation/{}/gradient+reranking (BCR)'.format(topic)]
-    # print('{} distinct-{}:'.format(topic, n))
-
-    # for i in range(len(variants)):
-    src = 'generated_samples/{}/{}'.format(sentiment_label, sample_method)
+def print_dist_scores(sentiment_label, sample_method, suffix, n):
+    src = 'generated_samples/{}/{}{}'.format(sentiment_label, sample_method, suffix)
     responses = read_responses(src)
-    outputs = eval_distinct(responses, n)
-    print(outputs)
+    output = eval_distinct(responses, n)
+    return output
 
 
 if __name__ == '__main__':
-    sentiment_label = [
-        # 'positive',
-        'negative'
-    ]
-
     # multiple
     sample_methods = [
         # 'BC',
-        'BC_VAD',
-        # 'BC_VAD_ABS'
+        # 'BC_VAD',
+        'BC_VAD_ABS'
     ]
-    print_dist_scores(sentiment_label[0], sample_methods[0], 1)
+
+    suffix = '(2_45_10)'
+    n = 1
+    pos = print_dist_scores('positive', sample_methods[0], suffix, n)
+    neg = print_dist_scores('negative', sample_methods[0], suffix, n)
+    mean = (pos + neg) / 2
+
+    print('dist-{}'.format(n))
+    print('pos: {}'.format(pos))
+    print('neg: {}'.format(neg))
+    print('mean: {}'.format(mean))
+
+

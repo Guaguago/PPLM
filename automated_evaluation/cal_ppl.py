@@ -76,6 +76,8 @@ def ppl_scores(topic, src_dir):
 
 
 if __name__ == '__main__':
+
+    # print(score_py('fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck'))
     src_dir = '../../automated_evaluation'
     file_info = [
         # 'computers.csv',
@@ -99,13 +101,13 @@ if __name__ == '__main__':
         # 'negative'
     ]
     sample_methods = [
-        'B',
-        # 'BC',
+        # 'B',
+        'BC',
         # 'BC_VAD',
         # 'BC_VAD_ABS'
     ]
 
-    suffix = '(1_45_10)'
+    suffix = '(2_45_10)'
 
     src = '{}/{}/{}{}'.format(SRC, 'positive', sample_methods[0], suffix)
     with open(src, 'r') as f:

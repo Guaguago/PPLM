@@ -3,7 +3,7 @@ from run_pplm import run_pplm_example
 
 def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose, suffix, seed=0):
     for method_name in sample_methods:
-        output = '{}/{}{}'.format(sentiment_label, method_name, suffix)
+        output = 'automated_evaluation/generated_samples/{}/{}{}'.format(sentiment_label, method_name, suffix)
         for prefix in prefixes:
             with open(output, 'a') as file:
                 run_pplm_example(
@@ -28,10 +28,12 @@ def generate_samples(prefixes, length, sample_methods, sentiment_label, verbose,
 
 
 if __name__ == '__main__':
-    prefixes = ['Once upon a time', 'The book', 'The chicken', 'The city', 'The country', 'The horse', 'The lake',
-                'The last time',
-                'The movie', 'The painting', 'The pizza', 'The potato', 'The president of the country', 'The road',
-                'The year is 1910.']
+    prefixes = ['Once upon a time',
+                # 'The book', 'The chicken', 'The city', 'The country', 'The horse', 'The lake',
+                # 'The last time',
+                # 'The movie', 'The painting', 'The pizza', 'The potato', 'The president of the country', 'The road',
+                # 'The year is 1910.'
+                ]
 
 
     SEED = 2
@@ -43,12 +45,12 @@ if __name__ == '__main__':
 
     # multiple
     sample_methods = [
-        'B',
-        # 'BC',
+        # 'B',
+        'BC',
         # 'BC_VAD',
         # 'BC_VAD_ABS'
     ]
 
     suffix = '(2_45_10)'
 
-    generate_samples(prefixes, 50, sample_methods, sentiment_label[0], 'quiet', suffix, seed=SEED)
+    generate_samples(prefixes, 10, sample_methods, sentiment_label[0], 'regular', suffix, seed=SEED)
