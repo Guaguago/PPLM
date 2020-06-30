@@ -26,6 +26,7 @@ import argparse
 import json
 from operator import add
 from typing import List, Optional, Tuple, Union
+import statistics as stat
 
 import numpy as np
 import torch
@@ -54,6 +55,10 @@ GENERATION_METHODS = {
     'BC_VAD': BASELINE_VAD,
     'BC_VAD_ABS': BASELINE_VAD_ABS,
 }
+
+BOUNDARY_POS = 0.9
+BOUNDARY_NEG = - 1.0
+LAMDA_V_LOSS = 1.0
 
 QUIET = 0
 REGULAR = 1
@@ -145,7 +150,8 @@ def perturb_past(
         gamma=1.5,
         kl_scale=0.01,
         device='cuda',
-        verbosity_level=REGULAR
+        verbosity_level=REGULAR,
+        affective_loss=0
 ):
     # Generate inital perturbed past: $\delta H$
     grad_accumulator = [
@@ -223,6 +229,10 @@ def perturb_past(
 
         loss = 0.0
         loss_list = []
+
+        # dsq
+        loss += affective_loss
+
         if loss_type == PPLM_BOW or loss_type == PPLM_BOW_DISCRIM:
             for one_hot_bow in one_hot_bows_vectors:
                 bow_logits = torch.mm(probs, torch.t(one_hot_bow))  # shape bow_logits: (1, bow_size)
@@ -439,7 +449,6 @@ def full_text_generation(
         generation_method=PERTURBED,
         **kwargs
 ):
-
     classifier, class_id = get_classifier(
         discrim,
         class_label,
@@ -470,7 +479,6 @@ def full_text_generation(
     else:
         raise Exception("Specify either a bag of words or a discriminator")
 
-
     unpert_gen_tok_text, _, _ = generate_text_pplm(
         model=model,
         tokenizer=tokenizer,
@@ -488,7 +496,6 @@ def full_text_generation(
     pert_gen_tok_texts = []
     discrim_losses = []
     losses_in_time = []
-
 
     for i in range(num_samples):
 
@@ -556,7 +563,6 @@ def generate_text_pplm(
         verbosity_level=REGULAR,
         file=None
 ):
-
     vad_words = None
     if generation_method >= BASELINE_VAD:
         import pandas as pd
@@ -583,8 +589,8 @@ def generate_text_pplm(
     else:
         range_func = range(length)
 
+    v_list = []
     for i in range_func:
-
 
         # Get past/probs for current output, except for last word
         # Note that GPT takes 2 inputs: past + current_token
@@ -619,6 +625,15 @@ def generate_text_pplm(
             accumulated_hidden = unpert_last_hidden[:, :-1, :]
             accumulated_hidden = torch.sum(accumulated_hidden, dim=1)
 
+            import math
+            def sigmoid(x):
+                return 1 / (1 + math.exp(-x))
+
+            # dsq
+            boundary = BOUNDARY_POS if class_label == 2 else BOUNDARY_NEG
+            v_loss = 0 if i == 0 else LAMDA_V_LOSS * abs(stat.mean(v_list) - boundary)
+            d_loss = 1 + sigmoid(length-i + 3) - sigmoid(length-i)
+            affective_loss = v_loss * d_loss
             if past is not None:
                 pert_past, _, grad_norms, loss_this_iter = perturb_past(
                     past,
@@ -640,7 +655,8 @@ def generate_text_pplm(
                     gamma=gamma,
                     kl_scale=kl_scale,
                     device=device,
-                    verbosity_level=verbosity_level
+                    verbosity_level=verbosity_level,
+                    affective_loss=affective_loss
                 )
                 loss_in_time.append(loss_this_iter)
             else:
@@ -701,7 +717,6 @@ def generate_text_pplm(
 
         # last may be assigned to unpert_last after vad check
         pert_last = last
-
         # VAD check
         is_unpert_last_kept = True
         pert_last_v, unpert_last_v = None, None
@@ -715,6 +730,9 @@ def generate_text_pplm(
             )
             if is_unpert_last_kept:
                 last = unpert_last
+                v_list.append(unpert_last_v)  # dsq
+            else:
+                v_list.append(pert_last_v)  # dsq
 
         # update context/output_so_far appending the new token
         output_so_far = (
@@ -753,6 +771,7 @@ def generate_text_pplm(
                     )
                     file.write(sequence + '\n')
 
+    print('============ {} words changed ============'.format(len([v for v in v_list if v > 0.5])))
     return output_so_far, unpert_discrim_loss, loss_in_time
 
 
@@ -827,6 +846,9 @@ def run_pplm_example(
         file=None,
         sample_method=PERTURBED
 ):
+    # set Random seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     # set verbosity
     verbosity_level = VERBOSITY_LEVELS.get(verbosity.lower(), REGULAR)
