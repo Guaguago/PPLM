@@ -439,6 +439,7 @@ def full_text_generation(
         generation_method=PERTURBED,
         **kwargs
 ):
+
     classifier, class_id = get_classifier(
         discrim,
         class_label,
@@ -469,6 +470,7 @@ def full_text_generation(
     else:
         raise Exception("Specify either a bag of words or a discriminator")
 
+
     unpert_gen_tok_text, _, _ = generate_text_pplm(
         model=model,
         tokenizer=tokenizer,
@@ -487,7 +489,9 @@ def full_text_generation(
     discrim_losses = []
     losses_in_time = []
 
+
     for i in range(num_samples):
+
         pert_gen_tok_text, discrim_loss, loss_in_time = generate_text_pplm(
             model=model,
             tokenizer=tokenizer,
@@ -552,6 +556,7 @@ def generate_text_pplm(
         verbosity_level=REGULAR,
         file=None
 ):
+
     vad_words = None
     if generation_method >= BASELINE_VAD:
         import pandas as pd
@@ -579,6 +584,7 @@ def generate_text_pplm(
         range_func = range(length)
 
     for i in range_func:
+
 
         # Get past/probs for current output, except for last word
         # Note that GPT takes 2 inputs: past + current_token
@@ -684,14 +690,14 @@ def generate_text_pplm(
             unpert_logits = unpert_logits[:, -1, :]
             unpert_logits = top_k_filter(unpert_logits, k=top_k)  # + SMALL_CONST
             unpert_probs = F.softmax(unpert_logits, dim=-1)
-            unpert_last = decode(unpert_probs, False)
+            unpert_last = decode_word(unpert_probs, True)
 
         else:
             pert_logits = top_k_filter(pert_logits, k=top_k)  # + SMALL_CONST
             # shape of pert_logits: (batch_size, vocab_size)
             pert_probs = F.softmax(pert_logits, dim=-1)
 
-        last = decode(pert_probs, sample)
+        last = decode_word(pert_probs, True)
 
         # last may be assigned to unpert_last after vad check
         pert_last = last
@@ -750,7 +756,7 @@ def generate_text_pplm(
     return output_so_far, unpert_discrim_loss, loss_in_time
 
 
-def decode(probs, sample=True):
+def decode_word(probs, sample=True):
     # sample or greedy
     if sample:
         # shape of pert_probs: (batch_size, vocab_size)
@@ -821,9 +827,6 @@ def run_pplm_example(
         file=None,
         sample_method=PERTURBED
 ):
-    # set Random seed
-    torch.manual_seed(seed)
-    np.random.seed(seed)
 
     # set verbosity
     verbosity_level = VERBOSITY_LEVELS.get(verbosity.lower(), REGULAR)
