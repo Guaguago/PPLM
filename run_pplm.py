@@ -56,9 +56,9 @@ GENERATION_METHODS = {
     'BC_VAD_ABS': BASELINE_VAD_ABS,
 }
 
-BOUNDARY_POS = 0.9
+BOUNDARY_POS = 1.0
 BOUNDARY_NEG = - 1.0
-LAMDA_V_LOSS = 1.0
+LAMBDA = 0.1
 
 QUIET = 0
 REGULAR = 1
@@ -630,10 +630,17 @@ def generate_text_pplm(
                 return 1 / (1 + math.exp(-x))
 
             # dsq
-            boundary = BOUNDARY_POS if class_label == 2 else BOUNDARY_NEG
-            v_loss = 0 if i == 0 else LAMDA_V_LOSS * abs(stat.mean(v_list) - boundary)
-            d_loss = 1 + sigmoid(length-i + 3) - sigmoid(length-i)
-            affective_loss = v_loss * d_loss
+            affective_loss = 0
+            if generation_method >= BASELINE_VAD:
+                boundary = BOUNDARY_POS if class_label == 2 else BOUNDARY_NEG
+                if i == 0:
+                    v_loss = 0
+                else:
+                    v_past = stat.mean(v_list)
+                    v_loss = LAMBDA * abs(v_past - boundary)
+                # d_loss = 1 + sigmoid(length-i + 3) - sigmoid(length-i)
+                affective_loss = v_loss
+
             if past is not None:
                 pert_past, _, grad_norms, loss_this_iter = perturb_past(
                     past,
