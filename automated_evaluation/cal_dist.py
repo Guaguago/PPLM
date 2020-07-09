@@ -20,9 +20,6 @@ def gen_response(self, contexts):
     contexts -- a list of context, each context contains dialogue histories and personal profiles of every speaker
     Returns a list, where each element is the response of the corresponding context
 """
-# from main import Model
-import json
-import sys
 
 # import tokenizer  ## this depends on which model are you currently using
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
@@ -56,8 +53,6 @@ def read_responses(file):
     with open(file, 'r') as f:
         samples = f.read().split('<|endoftext|>')
         samples = samples[1:]  # responses = [i.strip() for i in f.readlines() if len(i.strip()) != 0]
-        # responses = [i.strip() for i in f.readlines() if len(i.strip()) != 0]
-    # return [json.loads(i) for i in contents]
     return samples
 
 
@@ -119,10 +114,8 @@ def eval_distinct(hyps_resp, n):
     # , dist2, dist3
 
 
-def print_dist_scores(sentiment_label, sample_method, suffix, n):
-    src = 'generated_samples/{}/{}{}'.format(sentiment_label, sample_method, suffix)
-    responses = read_responses(src)
-    output = eval_distinct(responses, n)
+def cal_dist(samples, n):
+    output = eval_distinct(samples, n)
     return output
 
 
@@ -130,19 +123,33 @@ if __name__ == '__main__':
     # multiple
     sample_methods = [
         # 'BC',
-        # 'BC_VAD',
-        'BC_VAD_ABS'
+        'BC_VAD',
+        # 'BC_VAD_ABS'
     ]
 
-    suffix = '(2_45_10)'
-    n = 1
-    pos = print_dist_scores('positive', sample_methods[0], suffix, n)
-    neg = print_dist_scores('negative', sample_methods[0], suffix, n)
-    mean = (pos + neg) / 2
+    # suffix = '(dsq_2_150_10_0.1)'
 
-    print('dist-{}'.format(n))
-    print('pos: {}'.format(pos))
-    print('neg: {}'.format(neg))
-    print('mean: {}'.format(mean))
+    n = 1
+    src = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/generated_samples/vad_loss'
+    # src = '/Users/xuchen/core/pycharm/project/PPL/automated_evaluation/generated_samples/paper'
+
+    names = [
+        'abs_neg_02_3',
+        'abs_neg_02_4',
+    ]
+
+    for name in names:
+        path = '{}/{}'.format(src, name)
+        o = cal_dist(path, 1)
+        print('{}: {}'.format(name, o))
+
+    # pos = print_dist_scores('positive', sample_methods[0], suffix, n)
+    # neg = print_dist_scores('negative', sample_methods[0], suffix, n)
+    # # mean = (pos + neg) / 2
+    #
+    # print('dist-{}'.format(n))
+    # print('pos: {}'.format(pos))
+    # print('neg: {}'.format(neg))
+    # print('mean: {}'.format(mean))
 
 
