@@ -58,7 +58,7 @@ GENERATION_METHODS = {
 
 BOUNDARY_POS = 1.0
 BOUNDARY_NEG = - 1.0
-LAMBDA = 0.1
+LAMBDA = 0.0
 
 QUIET = 0
 REGULAR = 1
@@ -218,7 +218,6 @@ def perturb_past(
             for p_ in grad_accumulator  # iter layers
         ]  # seq_len-1
 
-
         # Compute hidden using perturbed past:
         perturbed_past = list(map(add, past, curr_perturbation))
         _, _, _, curr_length, _ = curr_perturbation[0].shape
@@ -232,19 +231,19 @@ def perturb_past(
         # TODO: Check the layer-norm consistency of this with trained discriminator (Sumanth)
         logits = all_logits[:, -1, :]
 
-
         if i == 0:
             origin_probs = F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1)
             unpert_last = decode_word(origin_probs, True)
 
-            if generation_method >= BASELINE_VAD:
+            if generation_method >= BASELINE_VAD and LAMBDA:
                 if v_list:
                     v_sents, topk_indices = sents_valence(tokenizer, vad_words, v_list, origin_probs, top_k)
                     boundary = BOUNDARY_POS if class_label == 2 else BOUNDARY_NEG
                     past_v_loss = torch.abs(torch.tensor(v_sents) - boundary)
                     unpert_sents_loss = torch.zeros(tokenizer.vocab_size)
                     unpert_sents_loss.scatter_(0, topk_indices, torch.tensor(past_v_loss))
-                    affective_loss = LAMBDA * torch.mm(origin_probs, torch.t(unpert_sents_loss.unsqueeze(0))).squeeze(0).squeeze(0)
+                    affective_loss = LAMBDA * torch.mm(origin_probs, torch.t(unpert_sents_loss.unsqueeze(0))).squeeze(
+                        0).squeeze(0)
 
         probs = F.softmax(logits, dim=-1)
 
@@ -668,14 +667,14 @@ def generate_text_pplm(
             # dsq
             # affective_loss = 0.0
             # if generation_method >= BASELINE_VAD:
-                # boundary = BOUNDARY_POS if class_label == 2 else BOUNDARY_NEG
-                # if i == 0:
-                #     v_loss = 0
-                # else:
-                #     v_past = stat.mean(v_list)
-                #     v_loss = LAMBDA * abs(v_past - boundary)
-                # d_loss = 1 + sigmoid(length-i + 3) - sigmoid(length-i)
-                # affective_loss = 0.0
+            # boundary = BOUNDARY_POS if class_label == 2 else BOUNDARY_NEG
+            # if i == 0:
+            #     v_loss = 0
+            # else:
+            #     v_past = stat.mean(v_list)
+            #     v_loss = LAMBDA * abs(v_past - boundary)
+            # d_loss = 1 + sigmoid(length-i + 3) - sigmoid(length-i)
+            # affective_loss = 0.0
 
             if past is not None:
                 unpert_last, pert_past, _, grad_norms, loss_this_iter = perturb_past(
