@@ -49,16 +49,16 @@ UNPERTURBED = 0
 PERTURBED = 1
 BASELINE_VAD = 2
 BASELINE_VAD_ABS = 3
+BASELINE_VAD_LOSS = 4
+BASELINE_VAD_MAX = 5
 GENERATION_METHODS = {
     'B': UNPERTURBED,
     'BC': PERTURBED,
     'BC_VAD': BASELINE_VAD,
     'BC_VAD_ABS': BASELINE_VAD_ABS,
+    'BC_VAD_LOSS': BASELINE_VAD_ABS,
+    'BC_VAD_MAX': BASELINE_VAD_MAX
 }
-
-BOUNDARY_POS = 1.0
-BOUNDARY_NEG = - 1.0
-LAMBDA = 0.0
 
 QUIET = 0
 REGULAR = 1
@@ -156,7 +156,7 @@ def perturb_past(
         kl_scale=0.01,
         device='cuda',
         verbosity_level=REGULAR,
-
+        vad_loss_params=None
 ):
     unpert_last = None
     # Generate inital perturbed past: $\delta H$
@@ -210,6 +210,9 @@ def perturb_past(
     new_accumulated_hidden = None
 
     affective_loss = 0.0
+
+    pert_lasts = []
+
     for i in range(num_iterations):
         if verbosity_level >= VERBOSE:
             print("Iteration ", i + 1)
@@ -231,21 +234,30 @@ def perturb_past(
         # TODO: Check the layer-norm consistency of this with trained discriminator (Sumanth)
         logits = all_logits[:, -1, :]
 
+        # the GPT-2 word
         if i == 0:
             origin_probs = F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1)
             unpert_last = decode_word(origin_probs, True)
 
-            if generation_method >= BASELINE_VAD and LAMBDA:
-                if v_list:
-                    v_sents, topk_indices = sents_valence(tokenizer, vad_words, v_list, origin_probs, top_k)
-                    boundary = BOUNDARY_POS if class_label == 2 else BOUNDARY_NEG
-                    past_v_loss = torch.abs(torch.tensor(v_sents) - boundary)
-                    unpert_sents_loss = torch.zeros(tokenizer.vocab_size)
-                    unpert_sents_loss.scatter_(0, topk_indices, torch.tensor(past_v_loss))
-                    affective_loss = LAMBDA * torch.mm(origin_probs, torch.t(unpert_sents_loss.unsqueeze(0))).squeeze(
-                        0).squeeze(0)
-
         probs = F.softmax(logits, dim=-1)
+
+        if generation_method >= BASELINE_VAD and vad_loss_params and v_list:
+            # unpack VAD_LOSS parameters
+            pos_threshold = vad_loss_params['pos_threshold']
+            neg_threshold = vad_loss_params['neg_threshold']
+            loss_lambda = vad_loss_params['lambda']
+            boundary = pos_threshold if class_label == 2 else neg_threshold
+
+            v_sents, topk_indices = sents_valence(tokenizer, vad_words, v_list, probs, top_k)
+            past_v_loss = torch.abs(torch.tensor(v_sents) - boundary)
+            unpert_sents_loss = torch.zeros(tokenizer.vocab_size)
+            unpert_sents_loss.scatter_(0, topk_indices, torch.tensor(past_v_loss))
+            affective_loss = loss_lambda * torch.mm(probs,
+                                                    torch.t(unpert_sents_loss.unsqueeze(0))).squeeze(0).squeeze(0)
+
+        if generation_method == BASELINE_VAD_MAX:
+            pert_lasts.append(decode_word(F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1), True))
+
 
         loss = 0.0
         loss_list = []
@@ -355,7 +367,7 @@ def perturb_past(
     ]
     pert_past = list(map(add, past, grad_accumulator))
 
-    return unpert_last, pert_past, new_accumulated_hidden, grad_norms, loss_per_iter
+    return unpert_last, pert_past, new_accumulated_hidden, grad_norms, loss_per_iter, pert_lasts
 
 
 def get_classifier(
@@ -467,6 +479,8 @@ def full_text_generation(
         verbosity_level=REGULAR,
         file=None,
         generation_method=PERTURBED,
+        vad_loss_params=None,
+        vad_threshold=0.01,
         **kwargs
 ):
     classifier, class_id = get_classifier(
@@ -544,6 +558,8 @@ def full_text_generation(
             kl_scale=kl_scale,
             verbosity_level=verbosity_level,
             file=file,
+            vad_loss_params=vad_loss_params,
+            vad_threshold=vad_threshold,
         )
         pert_gen_tok_texts.append(pert_gen_tok_text)
         if classifier is not None:
@@ -581,7 +597,10 @@ def generate_text_pplm(
         gm_scale=0.9,
         kl_scale=0.01,
         verbosity_level=REGULAR,
-        file=None
+        file=None,
+        vad_loss_params=None,
+        vad_threshold=None
+
 ):
     vad_words = None
     if generation_method >= BASELINE_VAD:
@@ -677,7 +696,7 @@ def generate_text_pplm(
             # affective_loss = 0.0
 
             if past is not None:
-                unpert_last, pert_past, _, grad_norms, loss_this_iter = perturb_past(
+                unpert_last, pert_past, _, grad_norms, loss_this_iter, pert_lasts = perturb_past(
                     generation_method,
                     tokenizer,
                     top_k,
@@ -703,6 +722,7 @@ def generate_text_pplm(
                     kl_scale=kl_scale,
                     device=device,
                     verbosity_level=verbosity_level,
+                    vad_loss_params=vad_loss_params,
                 )
                 loss_in_time.append(loss_this_iter)
             else:
@@ -754,7 +774,14 @@ def generate_text_pplm(
             # shape of pert_logits: (batch_size, vocab_size)
             pert_probs = F.softmax(pert_logits, dim=-1)
 
-        last = decode_word(pert_probs, True)
+        if generation_method == BASELINE_VAD_MAX:
+            if class_label == 2:
+                last = getMaxValenceWord(pert_lasts, vad_words, tokenizer, True)
+            elif class_label == 3:
+                last = getMaxValenceWord(pert_lasts, vad_words, tokenizer, False)
+
+        else:
+            last = decode_word(pert_probs, True)
 
         # last may be assigned to unpert_last after vad check
         pert_last = last
@@ -767,7 +794,8 @@ def generate_text_pplm(
                 tokenizer.decode(unpert_last.item()),
                 vad_words,
                 generation_method,
-                class_label
+                class_label,
+                vad_threshold,
             )
             if is_unpert_last_kept:
                 last = unpert_last
@@ -829,6 +857,13 @@ def sents_valence(tokenizer, vad_words, v_past, unpert_probs, top_k):
     return v_sents, topk_indices
 
 
+def getMaxValenceWord(pert_lasts, vad_words, tokenizer, positive=True):
+    pert_words = [tokenizer.decode(pert_last.item()) for pert_last in pert_lasts]
+    valences = [w2v(pert_word, vad_words) for pert_word in pert_words]
+    idx = valences.index(max(valences)) if positive else valences.index(min(valences))
+    return pert_lasts[idx]
+
+
 def w2v(word, vad_words):
     vad_vocab = vad_words.index
     return vad_words.loc[word]['Valence'] if word in vad_vocab else 0.5
@@ -844,7 +879,7 @@ def decode_word(probs, sample=True):
     return last
 
 
-def keep(pert_last, unpert_last, vad_words, generation_method, class_label):
+def keep(pert_last, unpert_last, vad_words, generation_method, class_label, vad_threshold=0.01):
     is_unpert_last_kept = True
     pert_last, unpert_last = pert_last.strip(), unpert_last.strip()
     vad_vocab = vad_words.index
@@ -856,7 +891,7 @@ def keep(pert_last, unpert_last, vad_words, generation_method, class_label):
         change = -change
     if generation_method == BASELINE_VAD_ABS:
         change = abs(change)
-    if change > 0.01:
+    if change > vad_threshold:
         is_unpert_last_kept = False  # change!
     return is_unpert_last_kept, pert_last_v, unpert_last_v
 
@@ -903,7 +938,9 @@ def run_pplm_example(
         colorama=False,
         verbosity='regular',
         file=None,
-        sample_method=PERTURBED
+        sample_method=PERTURBED,
+        vad_loss_params=None,
+        vad_threshold=0.01,
 ):
     # set Random seed
     torch.manual_seed(seed)
@@ -997,7 +1034,9 @@ def run_pplm_example(
         kl_scale=kl_scale,
         verbosity_level=verbosity_level,
         file=file,
-        generation_method=generation_method
+        generation_method=generation_method,
+        vad_loss_params=vad_loss_params,
+        vad_threshold=vad_threshold,
     )
 
     # untokenize unperturbed text
