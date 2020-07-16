@@ -209,11 +209,11 @@ def perturb_past(
     loss_per_iter = []
     new_accumulated_hidden = None
 
-    affective_loss = 0.0
 
     pert_lasts = []
 
     for i in range(num_iterations):
+
         if verbosity_level >= VERBOSE:
             print("Iteration ", i + 1)
         curr_perturbation = [
@@ -241,6 +241,7 @@ def perturb_past(
 
         probs = F.softmax(logits, dim=-1)
 
+        affective_loss = 0.0
         if generation_method >= BASELINE_VAD and vad_loss_params and v_list:
             # unpack VAD_LOSS parameters
             pos_threshold = vad_loss_params['pos_threshold']
@@ -768,11 +769,12 @@ def generate_text_pplm(
                 pert_probs = pert_probs / torch.sum(pert_probs)
 
 
-
         else:
             pert_logits = top_k_filter(pert_logits, k=top_k)  # + SMALL_CONST
             # shape of pert_logits: (batch_size, vocab_size)
             pert_probs = F.softmax(pert_logits, dim=-1)
+
+        last = decode_word(pert_probs, True)
 
         if generation_method == BASELINE_VAD_MAX:
             if class_label == 2:
@@ -780,8 +782,6 @@ def generate_text_pplm(
             elif class_label == 3:
                 last = getMaxValenceWord(pert_lasts, vad_words, tokenizer, False)
 
-        else:
-            last = decode_word(pert_probs, True)
 
         # last may be assigned to unpert_last after vad check
         pert_last = last
