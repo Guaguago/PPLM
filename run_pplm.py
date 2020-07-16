@@ -249,8 +249,8 @@ def perturb_past(
             boundary = pos_threshold if class_label == 2 else neg_threshold
 
             v_sents, topk_indices = sents_valence(tokenizer, vad_words, v_list, probs, top_k)
-            past_v_loss = torch.abs(torch.tensor(v_sents) - boundary)
-            unpert_sents_loss = torch.zeros(tokenizer.vocab_size)
+            past_v_loss = torch.abs(torch.tensor(v_sents, device=device) - boundary)
+            unpert_sents_loss = torch.zeros(tokenizer.vocab_size, device=device)
             unpert_sents_loss.scatter_(0, topk_indices, torch.tensor(past_v_loss))
             affective_loss = loss_lambda * torch.mm(probs,
                                                     torch.t(unpert_sents_loss.unsqueeze(0))).squeeze(0).squeeze(0)
