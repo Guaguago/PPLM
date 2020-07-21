@@ -759,7 +759,6 @@ def generate_text_pplm(
         pert_last = last
 
         # change or not?
-        need_change = True
         if generation_method >= BASELINE_VAD:
             unpert_last_word = tokenizer.decode([unpert_last.item()]).strip()
             pert_last_word = tokenizer.decode([pert_last.item()]).strip()
@@ -779,10 +778,10 @@ def generate_text_pplm(
             output_so_far = last
         else:
             output_so_far = torch.cat((output_so_far, last), dim=1)
-            if need_change and generation_method >= BASELINE_VAD and verbosity_level >= REGULAR:
-                tokens = torch.tensor([tokenizer.convert_tokens_to_ids(['[', '<', '-', ']'])], device=device)
-                tokens = torch.cat([tokens[:, :3], unpert_last, tokens[:, 3:]], dim=1)
-                output_so_far = torch.cat([output_so_far, tokens], dim=1)
+            # if need_change and generation_method >= BASELINE_VAD and verbosity_level >= REGULAR:
+            #     tokens = torch.tensor([tokenizer.convert_tokens_to_ids(['[', '<', '-', ']'])], device=device)
+            #     tokens = torch.cat([tokens[:, :3], unpert_last, tokens[:, 3:]], dim=1)
+            #     output_so_far = torch.cat([output_so_far, tokens], dim=1)
 
         if verbosity_level >= REGULAR:
             print(tokenizer.decode(output_so_far.tolist()[0]))
@@ -1040,9 +1039,9 @@ def run_pplm_example(
 
     if verbosity_level >= REGULAR:
         print("=" * 80)
-    print("= Unperturbed generated text =")
-    print(unpert_gen_text)
-    print()
+        print("= Unperturbed generated text =")
+        print(unpert_gen_text)
+        print()
 
     generated_texts = []
 
@@ -1083,7 +1082,7 @@ def run_pplm_example(
             # log sample
             if verbosity_level >= QUIET:
                 if verbosity_level >= REGULAR:
-                    pert_gen_text += ' [{} words changed]'.format(num_changes_list[i])
+                    pert_gen_text += '【{} words changed】'.format(num_changes_list[i])
                 file.write(pert_gen_text)
 
         except:
@@ -1095,8 +1094,10 @@ def run_pplm_example(
         )
 
     # log average changes
-    if verbosity_level >= REGULAR:
-        file.write('=' * 40 + ''.format(stat.mean(num_changes_list)) + '=' * 40)
+    if verbosity_level >= QUIET:
+        print('========{} words changed(mean)========'.format(stat.mean(num_changes_list)))
+        if verbosity_level >= REGULAR:
+            file.write('========{} words changed(mean)========'.format(stat.mean(num_changes_list)))
 
     return
 

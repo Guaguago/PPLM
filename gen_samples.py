@@ -55,7 +55,7 @@ if __name__ == '__main__':
     ]
 
     SEED = 2
-    num_iterations = 10
+    num_iterations = 5
     num_samples = 1
     # multiple
     sample_methods = [
@@ -67,12 +67,12 @@ if __name__ == '__main__':
     ]
 
     vad_loss_params = {
-        'lambda': 20,
+        'lambda': 0.5,
         'pos_threshold': 0.6,
         'neg_threshold': 0.2,
     }
 
-    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', 'regular', num_iterations=num_iterations,
-                     seed=SEED, vad_loss_params=vad_loss_params)
+    generate_samples(prefixes, num_samples, 25, sample_methods[0], 'negative', 'regular', num_iterations=num_iterations,
+                     seed=SEED, vad_loss_params=None)
     generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', 'regular', num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params)
