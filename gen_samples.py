@@ -7,8 +7,7 @@ def generate_samples(prefixes, num_samples, length, method_name, sentiment_label
     file_name = 'seed={},{},name={},samples={},itrs={},vad_t={}'.format(seed, sentiment_label, method_name,
                                                                         total_samples,
                                                                         num_iterations, vad_threshold)
-
-    if method_name == 'BC_VAD_LOSS':
+    if vad_loss_params:
         file_name += ', lambda={}, pos_t={}, neg_t={}'.format(vad_loss_params['lambda'],
                                                               vad_loss_params['pos_threshold'],
                                                               vad_loss_params['neg_threshold'])
@@ -46,36 +45,34 @@ if __name__ == '__main__':
         'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
         'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # extra 35 prefixes
-        'The article', 'I would like to', 'We should', 'In the future', 'The cat',
-        'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
-        'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
-        'The computer', 'My phone', 'The TV', 'The bus', 'Long long ago',
-        'My daughter', 'The ice cream', 'This recipe', 'Most of us', 'The game',
-        'The music', 'The show', 'The dress', 'In the evening', 'The traffic',
-        'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
+        # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
+        # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
+        # 'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
+        # 'The computer', 'My phone', 'The TV', 'The bus', 'Long long ago',
+        # 'My daughter', 'The ice cream', 'This recipe', 'Most of us', 'The game',
+        # 'The music', 'The show', 'The dress', 'In the evening', 'The traffic',
+        # 'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
     ]
 
     SEED = 2
     num_iterations = 10
-    num_samples = 10
+    num_samples = 1
     # multiple
     sample_methods = [
         # 'B',
         # 'BC',
-        # 'BC_VAD',
-        'BC_VAD_LOSS',
+        'BC_VAD',
         # 'BC_VAD_MAX',
         # 'BC_VAD_ABS'
     ]
 
     vad_loss_params = {
-        'lambda': 5.0,
+        'lambda': 20,
         'pos_threshold': 0.6,
         'neg_threshold': 0.2,
     }
 
-    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', 'regular', num_iterations=num_iterations,
+    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', 'regular', num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params)
-
-    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', 'quiet', num_iterations=num_iterations,
+    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', 'regular', num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params)
