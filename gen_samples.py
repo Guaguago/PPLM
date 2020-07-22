@@ -1,5 +1,6 @@
 from run_pplm import run_pplm_example
 import statistics as stat
+import os
 
 
 def generate_samples(prefixes, num_samples, length, method_name, sentiment_label, verbose, num_iterations,
@@ -38,9 +39,7 @@ def generate_samples(prefixes, num_samples, length, method_name, sentiment_label
                 vad_threshold=vad_threshold,
             )
             word_changes_list.append(word_changes)
-
-    with open(output, 'a') as file:
-        file.write('<|endoftext|>' + '' + '{}'.format(stat.mean(word_changes_list)))
+    os.rename('{}'.format(output), '{},changes={}'.format(output, stat.mean(word_changes_list)))
 
 
 if __name__ == '__main__':
@@ -50,7 +49,7 @@ if __name__ == '__main__':
         'The book', 'The chicken', 'The city', 'The country',
         'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
         'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
-        # extra 35 prefixes
+        # # extra 35 prefixes
         # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
         # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
         # 'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
@@ -61,7 +60,7 @@ if __name__ == '__main__':
     ]
 
     SEED = 2
-    num_iterations = 5
+    num_iterations = 10
     num_samples = 1
     # multiple
     sample_methods = [
@@ -78,7 +77,7 @@ if __name__ == '__main__':
         'neg_threshold': 0.2,
     }
 
-    generate_samples(prefixes, num_samples, 10, sample_methods[0], 'negative', 'quiet', num_iterations=num_iterations,
+    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', 'quiet', num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params)
     generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', 'quiet', num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params)
