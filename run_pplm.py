@@ -703,8 +703,9 @@ def generate_text_pplm(
             else:
                 pert_past = past
 
-            # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
+        # shape of pert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head)
         pert_logits, past, pert_all_hidden = model(last, past=pert_past)  # update past
+
         # shape of pert_logits: (batch_size, seq_len=1, vocab_size)
 
         pert_logits = pert_logits[:, -1, :] / temperature  # + SMALL_CONST
@@ -772,6 +773,8 @@ def generate_text_pplm(
             else:
                 last = unpert_last
                 past_valences.append(unpert_last_valence)
+
+            _, past, _ = model(last, past=unpert_past)  # update past
 
         # update context/output_so_far appending the new token
         if output_so_far is None:
