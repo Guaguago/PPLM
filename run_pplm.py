@@ -1094,12 +1094,13 @@ def run_pplm_example(
         )
 
     # log average changes
+    changes_mean = stat.mean(num_changes_list)
     if verbosity_level >= QUIET:
-        print('========{} words changed(mean)========'.format(stat.mean(num_changes_list)))
+        print('========{} words changed(mean)========'.format(changes_mean))
         if verbosity_level >= REGULAR:
-            file.write('========{} words changed(mean)========'.format(stat.mean(num_changes_list)))
+            file.write('\n========{} words changed(mean)========'.format(changes_mean))
 
-    return
+    return changes_mean
 
 
 if __name__ == '__main__':

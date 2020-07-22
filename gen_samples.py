@@ -1,4 +1,5 @@
 from run_pplm import run_pplm_example
+import statistics as stat
 
 
 def generate_samples(prefixes, num_samples, length, method_name, sentiment_label, verbose, num_iterations,
@@ -13,9 +14,11 @@ def generate_samples(prefixes, num_samples, length, method_name, sentiment_label
                                                               vad_loss_params['neg_threshold'])
 
     output = 'automated_evaluation/generated_samples/{}/{}'.format(sentiment_label, file_name)
+
+    word_changes_list = []
     for prefix in prefixes:
         with open(output, 'a') as file:
-            run_pplm_example(
+            word_changes = run_pplm_example(
                 cond_text=prefix,
                 num_samples=num_samples,
                 discrim='sentiment',
@@ -34,14 +37,17 @@ def generate_samples(prefixes, num_samples, length, method_name, sentiment_label
                 vad_loss_params=vad_loss_params,
                 vad_threshold=vad_threshold,
             )
+            word_changes_list.append(word_changes)
 
-    # file.write('=' * 89)
+    with open(output, 'a') as file:
+        file.write('<|endoftext|>' + '' + '{}'.format(stat.mean(word_changes_list)))
 
 
 if __name__ == '__main__':
     prefixes = [
         # standard 15 prefixes
-        'Once upon a time', 'The book', 'The chicken', 'The city', 'The country',
+        'Once upon a time',
+        'The book', 'The chicken', 'The city', 'The country',
         'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
         'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # extra 35 prefixes
@@ -72,7 +78,7 @@ if __name__ == '__main__':
         'neg_threshold': 0.2,
     }
 
-    generate_samples(prefixes, num_samples, 25, sample_methods[0], 'negative', 'regular', num_iterations=num_iterations,
-                     seed=SEED, vad_loss_params=None)
-    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', 'regular', num_iterations=num_iterations,
+    generate_samples(prefixes, num_samples, 10, sample_methods[0], 'negative', 'quiet', num_iterations=num_iterations,
+                     seed=SEED, vad_loss_params=vad_loss_params)
+    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', 'quiet', num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params)
