@@ -134,10 +134,10 @@ def perturb_past(
         top_k,
         vad_words,
         past_valences,
-        past,
+        past,  # n-1
         model,
         last,
-        unpert_past=None,
+        unpert_past=None,  # n
         unpert_logits=None,
         accumulated_hidden=None,
         grad_norms=None,
@@ -677,11 +677,11 @@ def generate_text_pplm(
                     top_k,
                     vad_words,
                     past_valences,
-                    past,
+                    past,  # n-1
                     model,
                     last,
-                    unpert_past=unpert_past,  # seq_len
-                    unpert_logits=unpert_logits,  # seq_len
+                    unpert_past=unpert_past,  # n
+                    unpert_logits=unpert_logits,  # n
                     accumulated_hidden=accumulated_hidden,  # (batch_size, h_size=1024)
                     grad_norms=grad_norms,
                     stepsize=current_stepsize,
@@ -773,8 +773,8 @@ def generate_text_pplm(
             else:
                 last = unpert_last
                 past_valences.append(unpert_last_valence)
-
-            _, past, _ = model(last, past=unpert_past)  # update past
+            past = unpert_past
+            # _, past, _ = model(last, past=unpert_past)  # update past
 
         # update context/output_so_far appending the new token
         if output_so_far is None:
