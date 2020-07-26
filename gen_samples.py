@@ -46,7 +46,8 @@ if __name__ == '__main__':
     prefixes = [
         # standard 15 prefixes
         'Once upon a time',
-        'The book', 'The chicken', 'The city', 'The country',
+        'The book', 'The chicken',
+        'The city', 'The country',
         'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
         'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # # extra 35 prefixes
@@ -60,9 +61,11 @@ if __name__ == '__main__':
     ]
 
     SEED = 2
-    num_iterations = 10
+    num_iterations = 3
     num_samples = 1
-    # multiple
+    vad_threshold = 0.01
+    verbosity = 'quiet'
+
     sample_methods = [
         # 'B',
         # 'BC',
@@ -72,12 +75,13 @@ if __name__ == '__main__':
     ]
 
     vad_loss_params = {
-        'lambda': 0.5,
+        'lambda': 20.0,
         'pos_threshold': 0.6,
-        'neg_threshold': 0.2,
+        'neg_threshold': 0.4,
     }
+    vad_loss_params = None
 
-    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', 'quiet', num_iterations=num_iterations,
-                     seed=SEED, vad_loss_params=vad_loss_params)
-    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', 'quiet', num_iterations=num_iterations,
-                     seed=SEED, vad_loss_params=vad_loss_params)
+    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', verbosity, num_iterations=num_iterations,
+                     seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=vad_threshold)
+    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', verbosity, num_iterations=num_iterations,
+                     seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=vad_threshold)
