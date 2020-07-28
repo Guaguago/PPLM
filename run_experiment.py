@@ -35,26 +35,27 @@ if __name__ == '__main__':
         'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
         'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # # extra 35 prefixes
-        'The article', 'I would like to', 'We should', 'In the future', 'The cat',
-        'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
-        'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
-        'The computer', 'My phone', 'The TV', 'The bus', 'Long long ago',
-        'My daughter', 'The ice cream', 'This recipe', 'Most of us', 'The game',
-        'The music', 'The show', 'The dress', 'In the evening', 'The traffic',
-        'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
+        # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
+        # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
+        # 'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
+        # 'The computer', 'My phone', 'The TV', 'The bus', 'Long long ago',
+        # 'My daughter', 'The ice cream', 'This recipe', 'Most of us', 'The game',
+        # 'The music', 'The show', 'The dress', 'In the evening', 'The traffic',
+        # 'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
     ]
 
-    pos_src = '/Users/xuchen/core/pycharm/project/PPLM/data/test/generated_samples/1000/BC_VAD(seed5_loss_pos_l5_0602_500)'
-    neg_src = '/Users/xuchen/core/pycharm/project/PPLM/data/test/generated_samples/1000/BC_VAD(seed5_loss_neg_l5_0602_500)'
+    neg_src = 'automated_evaluation/generated_samples/new/seed=2,negative,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=1000.0, pos_t=0.9, neg_t=0.1,changes=12.693333333333333'
+    pos_src = 'automated_evaluation/generated_samples/new/seed=2,positive,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=1000.0, pos_t=0.9, neg_t=0.1,changes=17.573333333333334'
 
     # Only for VAD_LOSS
-    LAMBDA = 5.0
-    pos_threshold = 0.6
-    neg_threshold = 0.2
-
-    method = 'BC_VAD_LOSS'
-    seed = 5
-    num_samples = 10
+    LAMBDA = 1000.0
+    pos_threshold = 0.9
+    neg_threshold = 0.1
+    neg_changes = 12.69
+    pos_changes = 17.57
+    method = 'vad-loss'
+    seed = 2
+    num_samples = 5
     total_samples = len(prefixes) * num_samples
 
     vad_threshold = 0.01
@@ -111,32 +112,37 @@ if __name__ == '__main__':
     }
 
     # neptune - start an experiment
-    neptune.init('Lenovo/PPLM')
-    neptune.create_experiment(name='sentiment_control', params=PARAMS)
+    neptune.init('guaguago/change-or-not')
+    neptune.create_experiment(name='sentiment-control', params=PARAMS)
 
     # neptune - log PPL
-    neptune.log_metric('pos_ppl', float('{:.3f}'.format(pos_ppl)))
-    neptune.log_metric('neg_ppl', float('{:.3f}'.format(neg_ppl)))
-    neptune.log_metric('mean_ppl', float('{:.3f}'.format(mean_ppl)))
+    neptune.log_metric('pos-ppl', float('{:.3f}'.format(pos_ppl)))
+    neptune.log_metric('neg-ppl', float('{:.3f}'.format(neg_ppl)))
+    neptune.log_metric('mean-ppl', float('{:.3f}'.format(mean_ppl)))
 
     # neptune - log dist-1,2,3
     neptune.log_metric('pos-dist-1', float('{:.3f}'.format(pos_dist_1)))
     neptune.log_metric('pos-dist-2', float('{:.3f}'.format(pos_dist_2)))
     neptune.log_metric('pos-dist-3', float('{:.3f}'.format(pos_dist_3)))
-    neptune.log_metric('neg_dist_1', float('{:.3f}'.format(neg_dist_1)))
-    neptune.log_metric('neg_dist_2', float('{:.3f}'.format(neg_dist_2)))
-    neptune.log_metric('neg_dist_3', float('{:.3f}'.format(neg_dist_3)))
-    neptune.log_metric('mean_dist_1', float('{:.3f}'.format(mean_dist_1)))
-    neptune.log_metric('mean_dist_2', float('{:.3f}'.format(mean_dist_2)))
-    neptune.log_metric('mean_dist_3', float('{:.3f}'.format(mean_dist_3)))
+    neptune.log_metric('neg-dist-1', float('{:.3f}'.format(neg_dist_1)))
+    neptune.log_metric('neg-dist-2', float('{:.3f}'.format(neg_dist_2)))
+    neptune.log_metric('neg-dist-3', float('{:.3f}'.format(neg_dist_3)))
+    neptune.log_metric('mean-dist-1', float('{:.3f}'.format(mean_dist_1)))
+    neptune.log_metric('mean-dist-2', float('{:.3f}'.format(mean_dist_2)))
+    neptune.log_metric('mean-dist-3', float('{:.3f}'.format(mean_dist_3)))
 
     # neptune - log acc
-    neptune.log_metric('pos_acc', float('{:.3f}'.format(pos_acc)))
-    neptune.log_metric('neg_acc', float('{:.3f}'.format(neg_acc)))
-    neptune.log_metric('mean_acc', float('{:.3f}'.format(mean_acc)))
+    neptune.log_metric('pos-acc', float('{:.3f}'.format(pos_acc)))
+    neptune.log_metric('neg-acc', float('{:.3f}'.format(neg_acc)))
+    neptune.log_metric('mean-acc', float('{:.3f}'.format(mean_acc)))
+
+    # neptune - log changes
+    neptune.log_metric('pos-changes', pos_changes)
+    neptune.log_metric('neg-changes', neg_changes)
+    neptune.log_metric('mean-changes', float('{:.3f}'.format((pos_changes + neg_changes) / 2)))
 
     # neptune - log samples
-    [neptune.log_text('pos_samples', s) for s in pos_samples]
-    [neptune.log_text('neg_samples', s) for s in neg_samples]
+    [neptune.log_text('pos-samples', s) for s in pos_samples]
+    [neptune.log_text('neg-samples', s) for s in neg_samples]
 
     neptune.stop()
