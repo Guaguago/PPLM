@@ -44,15 +44,15 @@ if __name__ == '__main__':
         # 'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
     ]
 
-    neg_src = 'automated_evaluation/generated_samples/new/seed=2,negative,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=1000.0, pos_t=0.9, neg_t=0.1,changes=12.693333333333333'
-    pos_src = 'automated_evaluation/generated_samples/new/seed=2,positive,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=1000.0, pos_t=0.9, neg_t=0.1,changes=17.573333333333334'
+    neg_src = 'automated_evaluation/generated_samples/new3/seed=2,negative,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=0.5, pos_t=0.6, neg_t=0.4,changes=7.933333333333334'
+    pos_src = 'automated_evaluation/generated_samples/new3/seed=2,positive,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=0.5, pos_t=0.6, neg_t=0.4,changes=7.173333333333333'
 
     # Only for VAD_LOSS
-    LAMBDA = 1000.0
-    pos_threshold = 0.9
-    neg_threshold = 0.1
-    neg_changes = 12.69
-    pos_changes = 17.57
+    LAMBDA = 0.5
+    pos_threshold = 0.6
+    neg_threshold = 0.4
+    neg_changes = 7.9
+    pos_changes = 7.17
     method = 'vad-loss'
     seed = 2
     num_samples = 5
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     }
 
     # neptune - start an experiment
-    neptune.init('guaguago/change-or-not')
+    neptune.init('guaguago/test')
     neptune.create_experiment(name='sentiment-control', params=PARAMS)
 
     # neptune - log PPL

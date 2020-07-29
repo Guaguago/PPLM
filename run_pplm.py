@@ -252,7 +252,7 @@ def perturb_past(
             # affective_loss = loss_lambda * vad_loss
 
         if generation_method == BASELINE_VAD_MAX:
-            pert_lasts.append(sample(F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1), True))
+            pert_lasts.append(sample_word(F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1), True))
 
         loss = 0.0
         loss_list = []

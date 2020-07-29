@@ -39,7 +39,7 @@ def generate_samples(prefixes, num_samples, length, method_name, sentiment_label
                 vad_threshold=vad_threshold,
             )
             word_changes_list.append(word_changes)
-    os.rename('{}'.format(output), '{},changes={}'.format(output, stat.mean(word_changes_list)))
+    os.rename('{}'.format(output), '{},changes={:.2f}'.format(output, stat.mean(word_changes_list)))
 
 
 if __name__ == '__main__':
@@ -61,8 +61,8 @@ if __name__ == '__main__':
     ]
 
     SEED = 2
-    num_iterations = 3
-    num_samples = 1
+    num_iterations = 10
+    num_samples = 5
     vad_threshold = 0.01
     verbosity = 'quiet'
 
@@ -75,13 +75,13 @@ if __name__ == '__main__':
     ]
 
     vad_loss_params = {
-        'lambda': 20.0,
+        'lambda': 1.0,
         'pos_threshold': 0.6,
         'neg_threshold': 0.4,
     }
     vad_loss_params = None
 
-    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', verbosity, num_iterations=num_iterations,
+    generate_samples(prefixes, num_samples, 15, sample_methods[0], 'negative', verbosity, num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=vad_threshold)
     generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', verbosity, num_iterations=num_iterations,
                      seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=vad_threshold)
