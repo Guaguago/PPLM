@@ -156,7 +156,6 @@ def perturb_past(
         verbosity_level=REGULAR,
         vad_loss_params=None
 ):
-    unpert_last = None
     # Generate inital perturbed past: $\delta H$
     grad_accumulator = [
         (np.zeros(p.shape).astype("float32"))
@@ -232,9 +231,9 @@ def perturb_past(
         logits = all_logits[:, -1, :]
 
         # the GPT-2 word
-        if i == 0:
-            origin_probs = F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1)
-            unpert_last = decode_word(origin_probs, True)
+        # if i == 0:
+        #     origin_probs = F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1)
+        #     unpert_last = sample(origin_probs, True)
 
         probs = F.softmax(logits, dim=-1)
 
@@ -245,14 +244,15 @@ def perturb_past(
             # unpack VAD_LOSS parameters
 
             top_probs = F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1)
-            affective_loss = cal_affective_loss(tokenizer, vad_words, past_valences, top_probs, top_k, class_label, vad_loss_params,
-                                    device)
+            affective_loss = cal_affective_loss(tokenizer, vad_words, past_valences, top_probs, top_k, class_label,
+                                                vad_loss_params,
+                                                device)
             # past_v_loss = torch.abs(torch.tensor(v_sents, device=device) - boundary)
             # unpert_sents_loss.scatter_(0, topk_indices, torch.tensor(past_v_loss))
             # affective_loss = loss_lambda * vad_loss
 
         if generation_method == BASELINE_VAD_MAX:
-            pert_lasts.append(decode_word(F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1), True))
+            pert_lasts.append(sample(F.softmax(top_k_filter(all_logits[:, -1, :], k=top_k), dim=-1), True))
 
         loss = 0.0
         loss_list = []
@@ -362,7 +362,7 @@ def perturb_past(
     ]
     pert_past = list(map(add, past, grad_accumulator))
 
-    return unpert_last, pert_past, new_accumulated_hidden, grad_norms, loss_per_iter, pert_lasts
+    return pert_past, new_accumulated_hidden, grad_norms, loss_per_iter, pert_lasts
 
 
 def get_classifier(
@@ -645,14 +645,12 @@ def generate_text_pplm(
                 _, past, _ = model(output_so_far[:, :-1])
                 # shape of past: (num_layers, 2, batch_size, num_heads, seq_len-1, embed_size_per_head=64)
         unpert_logits, unpert_past, unpert_all_hidden = model(output_so_far)
-        # shape of unpert_logits: (batch_size, seq_len, vocab_size)
-        # shape of unpert_past: (num_layers, 2, batch_size, num_heads, seq_len, embed_size_per_head=64)
-        # shape of unpert_all_hidden: (1+num_layers, batch_size, seq_len, h_size=1024)
+        unpert_last = None
 
         unpert_last_hidden = unpert_all_hidden[-1]
-        # shape of unpert_last_hidden: (batch_size, seq_len, h_size=1024)
 
-        unpert_last = None
+        # unpert_probs = F.softmax(unpert_logits[:, -1, :] / temperature, dim=-1)
+        # unpert_last = None
 
         # check if we are abowe grad max length
         if i >= grad_length:
@@ -671,7 +669,7 @@ def generate_text_pplm(
             accumulated_hidden = torch.sum(accumulated_hidden, dim=1)
 
             if past is not None:
-                unpert_last, pert_past, _, grad_norms, loss_this_iter, pert_lasts = perturb_past(
+                pert_past, _, grad_norms, loss_this_iter, pert_lasts = perturb_past(
                     generation_method,
                     tokenizer,
                     top_k,
@@ -729,7 +727,6 @@ def generate_text_pplm(
 
         # Fuse the modified model and original model
         if generation_method >= PERTURBED:
-
             unpert_probs = F.softmax(unpert_logits[:, -1, :], dim=-1)
 
             pert_probs = ((pert_probs ** gm_scale) * (
@@ -741,6 +738,9 @@ def generate_text_pplm(
             if torch.sum(pert_probs) <= 1:
                 pert_probs = pert_probs / torch.sum(pert_probs)
 
+            if generation_method >= BASELINE_VAD:
+                unpert_last = sample_word(F.softmax(top_k_filter(unpert_logits[:, -1, :], k=top_k)))
+
 
         else:
             pert_logits = top_k_filter(pert_logits, k=top_k)  # + SMALL_CONST
@@ -748,7 +748,7 @@ def generate_text_pplm(
             pert_probs = F.softmax(pert_logits, dim=-1)
 
         # the last output word idx
-        last = decode_word(pert_probs, True)
+        last = sample_word(pert_probs, True)
 
         if generation_method == BASELINE_VAD_MAX:
             if class_label == 2:
@@ -773,7 +773,7 @@ def generate_text_pplm(
             else:
                 last = unpert_last
                 past_valences.append(unpert_last_valence)
-            past = unpert_past
+            # past = unpert_past
             # _, past, _ = model(last, past=unpert_past)  # update past
 
         # update context/output_so_far appending the new token
@@ -788,35 +788,6 @@ def generate_text_pplm(
 
         if verbosity_level >= REGULAR:
             print(tokenizer.decode(output_so_far.tolist()[0]))
-
-        # log outputs
-        # if generation_method >= PERTURBED:
-        #     # dist change of the same word
-        #     unpert_prob = unpert_probs.squeeze()[pert_last.item()].item()
-        #     pert_prob = pert_probs.squeeze()[pert_last.item()].item()
-        #
-        #     # # word change
-        #     # unpert_last_word = tokenizer.decode(unpert_last.item()).strip()
-        #     # pert_last_word = tokenizer.decode(pert_last.item()).strip()
-        #
-        #     if verbosity_level >= REGULAR:
-        #         if generation_method == PERTURBED:
-        #             sequence = '【{}】【w({}->{}), d({:.3}->{:.3})】'.format(
-        #                 tokenizer.decode(output_so_far.squeeze().tolist()),
-        #                 unpert_last_word, pert_last_word,
-        #                 unpert_prob, pert_prob
-        #             )
-        #             file.write(sequence + '\n')
-        #
-        #         elif generation_method >= BASELINE_VAD:
-        #             sequence = '【{}】【w({}->{}{}), v({:.3}->{:.3}), d({:.3}->{:.3})】'.format(
-        #                 tokenizer.decode(output_so_far.squeeze().tolist()),
-        #                 unpert_last_word, pert_last_word,
-        #                 '->' + unpert_last_word if is_unpert_last_kept else '',  # just last
-        #                 unpert_last_v, pert_last_v,
-        #                 unpert_prob, pert_prob,
-        #             )
-        #             file.write(sequence + '\n')
 
     return output_so_far, unpert_discrim_loss, loss_in_time, num_changes
 
@@ -865,7 +836,7 @@ def w2v(word, vad_words):
     return vad_words.loc[word]['Valence'] if word in vad_vocab else 0.5
 
 
-def decode_word(probs, sample=True):
+def sample_word(probs, sample=True):
     # sample or greedy
     if sample:
         # shape of pert_probs: (batch_size, vocab_size)
