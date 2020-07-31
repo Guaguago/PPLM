@@ -35,27 +35,26 @@ if __name__ == '__main__':
         'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
         'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # # extra 35 prefixes
-        # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
-        # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
-        # 'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
-        # 'The computer', 'My phone', 'The TV', 'The bus', 'Long long ago',
-        # 'My daughter', 'The ice cream', 'This recipe', 'Most of us', 'The game',
-        # 'The music', 'The show', 'The dress', 'In the evening', 'The traffic',
-        # 'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
+        'The article', 'I would like to', 'We should', 'In the future', 'The cat',
+        'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
+        'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
+        'The computer', 'My phone', 'The TV', 'The bus', 'Long long ago',
+        'My daughter', 'The ice cream', 'This recipe', 'Most of us', 'The game',
+        'The music', 'The show', 'The dress', 'In the evening', 'The traffic',
+        'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
     ]
 
-    neg_src = 'automated_evaluation/generated_samples/new3/seed=2,negative,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=0.5, pos_t=0.6, neg_t=0.4,changes=7.933333333333334'
-    pos_src = 'automated_evaluation/generated_samples/new3/seed=2,positive,name=BC_VAD,samples=75,itrs=10,vad_t=0.01, lambda=0.5, pos_t=0.6, neg_t=0.4,changes=7.173333333333333'
+    neg_src = 'automated_evaluation/generated_samples/p-val/seed=10,negative,name=BC,samples=500,itrs=10,vad_t=0.01,changes=0.00'
+    pos_src = 'automated_evaluation/generated_samples/p-val/seed=10,positive,name=BC,samples=500,itrs=10,vad_t=0.01,changes=0.00'
 
-    # Only for VAD_LOSS
-    LAMBDA = 0.5
+    seed = 10
+    LAMBDA = 5.0
     pos_threshold = 0.6
     neg_threshold = 0.4
-    neg_changes = 7.9
-    pos_changes = 7.17
-    method = 'vad-loss'
-    seed = 2
-    num_samples = 5
+    neg_changes = 0
+    pos_changes = 0
+    method = 'pplm'
+    num_samples = 10
     total_samples = len(prefixes) * num_samples
 
     vad_threshold = 0.01
@@ -105,6 +104,7 @@ if __name__ == '__main__':
         'gm_scale': 0.95,
         'kl_scale': 0.01,
         'vad_threshold': vad_threshold,
+        # whether
         'pos_threshold': pos_threshold,
         'neg_threshold': neg_threshold,
         'lambda': LAMBDA
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     }
 
     # neptune - start an experiment
-    neptune.init('guaguago/test')
+    neptune.init('guaguago/p-value')
     neptune.create_experiment(name='sentiment-control', params=PARAMS)
 
     # neptune - log PPL
