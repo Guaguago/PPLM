@@ -65,7 +65,6 @@ if __name__ == '__main__':
         stat.mean(dist3_loss_o), stat.stdev(dist3_loss_o),
     ))
 
-
     # print('pplm-u: {:.2f}/{:.2f}, {:.2f}/{:.2f}, {:.3f}/{:.3f}'.format(
     #     stat.mean(acc_pplm_u), stat.stdev(acc_pplm_u),
     #     stat.mean(ppl_pplm_u), stat.stdev(ppl_pplm_u),
@@ -82,11 +81,11 @@ if __name__ == '__main__':
     #     stat.mean(dist1_loss), stat.stdev(dist1_loss)
     # ))
 
-    _, p_acc = wilcoxon(acc_pplm, acc_loss)
+    _, p_acc = wilcoxon(acc_pplm, acc_vad_o)
     print('acc p-value={}'.format(p_acc))
-    _, p_ppl = wilcoxon(ppl_pplm, ppl_loss)
+    _, p_ppl = wilcoxon(ppl_pplm, ppl_vad_o)
     print('dist p-value={}'.format(p_ppl))
-    _, p_dist1 = wilcoxon(dist1_pplm, dist1_loss)
+    _, p_dist1 = wilcoxon(dist1_pplm, dist1_vad_o)
     print('dist p-value={}'.format(p_dist1))
 
     # interpret
