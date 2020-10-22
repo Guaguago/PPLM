@@ -1166,23 +1166,23 @@ if __name__ == '__main__':
                         help="verbosiry level")
 
     args = parser.parse_args()
-    # run_pplm_example(**vars(args))
+    run_pplm_example(**vars(args))
 
-    with open('lalalalalala', 'a') as file:
-        run_pplm_example(
-            cond_text='Once upon a time',
-            num_samples=3,
-            discrim='sentiment',
-            # class_label=10,
-            class_label=3,
-            length=50,  # influence random
-            seed=0,
-            stepsize=0.05,
-            sample=True,
-            num_iterations=3,
-            gamma=1,
-            gm_scale=0.9,
-            kl_scale=0.02,
-            verbosity='regular',
-            file=file
-        )
+    # with open('lalalalalala', 'a') as file:
+    #     run_pplm_example(
+    #         cond_text='Once upon a time',
+    #         num_samples=3,
+    #         discrim='sentiment',
+    #         # class_label=10,
+    #         class_label=3,
+    #         length=50,  # influence random
+    #         seed=0,
+    #         stepsize=0.05,
+    #         sample=True,
+    #         num_iterations=3,
+    #         gamma=1,
+    #         gm_scale=0.9,
+    #         kl_scale=0.02,
+    #         verbosity='regular',
+    #         file=file
+    #     )
