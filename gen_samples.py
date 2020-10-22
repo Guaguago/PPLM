@@ -3,8 +3,18 @@ import statistics as stat
 import os
 
 
-def generate_samples(prefixes, num_samples, length, method_name, sentiment_label, verbose, num_iterations,
-                     vad_loss_params=None, seed=0, vad_threshold=0.01):
+def generate_samples(
+        prefixes,
+        num_samples,
+        length,
+        method_name,
+        sentiment_label,
+        verbose,
+        num_iterations,
+        vad_loss_params=None,
+        seed=0,
+        vad_threshold=0.01
+):
     total_samples = len(prefixes) * num_samples
     file_name = 'seed={},{},name={},samples={},itrs={},vad_t={}'.format(seed, sentiment_label, method_name,
                                                                         total_samples,
@@ -46,11 +56,11 @@ if __name__ == '__main__':
     prefixes = [
         # standard 15 prefixes
         'Once upon a time',
-        'The book', 'The chicken',
-        'The city', 'The country',
-        'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
-        'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
-        # # extra 35 prefixes
+        # 'The book', 'The chicken',
+        # 'The city', 'The country',
+        # 'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
+        # 'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
+        # # # extra 35 prefixes
         # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
         # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
         # 'The owner', 'Our house', 'Do you like', 'Her hair', 'The spider man',
@@ -60,11 +70,11 @@ if __name__ == '__main__':
         # 'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
     ]
 
-    SEED = 2
+    SEED = 20
     num_iterations = 10
-    num_samples = 5
-    vad_threshold = 0.01
-    verbosity = 'quiet'
+    num_samples = 10
+    fixed_threshold = 0.01
+    verbosity = 'regular'
 
     sample_methods = [
         # 'B',
@@ -74,14 +84,18 @@ if __name__ == '__main__':
         # 'BC_VAD_ABS'
     ]
 
+    # for our PPLM-VAD-Loss
     vad_loss_params = {
-        'lambda': 1.0,
+        'lambda': 2.0,
         'pos_threshold': 0.6,
         'neg_threshold': 0.4,
     }
-    vad_loss_params = None
+    # vad_loss_params = None
 
-    generate_samples(prefixes, num_samples, 15, sample_methods[0], 'negative', verbosity, num_iterations=num_iterations,
-                     seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=vad_threshold)
+    # positive generation
     generate_samples(prefixes, num_samples, 50, sample_methods[0], 'positive', verbosity, num_iterations=num_iterations,
-                     seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=vad_threshold)
+                     seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=fixed_threshold)
+
+    # negative generation
+    generate_samples(prefixes, num_samples, 50, sample_methods[0], 'negative', verbosity, num_iterations=num_iterations,
+                     seed=SEED, vad_loss_params=vad_loss_params, vad_threshold=fixed_threshold)
