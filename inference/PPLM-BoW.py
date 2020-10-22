@@ -22,6 +22,7 @@ if __name__ == '__main__':
 
     # 2.Config Hyperparameters
     task = 'positive'
+    bag_of_words = 'dead'
     sample_methods = 'PPLM-BoW'
     seed = 20
     num_samples_each_prefix = 1
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     for prefix in prefixes:
         with open(dst_file, 'a') as file:
             run_pplm_example(
-                bag_of_words='dead',
+                bag_of_words=bag_of_words,
                 cond_text=prefix,
                 num_samples=num_samples_each_prefix,
                 length=length,  # influence random
