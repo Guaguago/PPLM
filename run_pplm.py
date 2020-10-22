@@ -773,8 +773,9 @@ def generate_text_pplm(
             else:
                 last = unpert_last
                 past_valences.append(unpert_last_valence)
-            # past = unpert_past
-            # _, past, _ = model(last, past=unpert_past)  # update past
+        #             past = unpert_past  # update past
+
+        #         past = unpert_past  # update past
 
         # update context/output_so_far appending the new token
         if output_so_far is None:
