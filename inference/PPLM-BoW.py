@@ -51,12 +51,12 @@ if __name__ == '__main__':
 
     # 2.Common Hyperparameters
     seed = 1
-    num_samples_each_prefix = 1
+    num_samples_each_prefix = 3
     total_samples = len(prefixes) * num_samples_each_prefix
     num_iterations = 3
     step_size = 0.01  # control strength "dead dead ... dead"
-    length = 5
-    verbosity = 'regular'
+    length = 50
+    verbosity = 'quiet'
 
     # 3.Positive Control With Specific Parameters Assigned
     start_time = time.time()
