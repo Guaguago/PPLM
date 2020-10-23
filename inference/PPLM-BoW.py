@@ -35,10 +35,10 @@ if __name__ == '__main__':
     prefixes = [
         # standard 15 prefixes
         'Once upon a time',
-        # 'The book', 'The chicken',
-        # 'The city', 'The country',
-        # 'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
-        # 'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
+        'The book', 'The chicken',
+        'The city', 'The country',
+        'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
+        'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # # # extra 35 prefixes
         # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
         # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
