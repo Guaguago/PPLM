@@ -10,9 +10,9 @@ def output_file_path(task, bow, seed, total_samples, m):
 
 
 def generation(bag_of_words, seed, num_samples_each_prefix, length, step_size, num_iterations, verbosity, prefixes,
-               file):
+               dst_file):
     for prefix in prefixes:
-        with open(file, 'a') as file:
+        with open(dst_file, 'a') as file:
             run_pplm_example(
                 bag_of_words=bag_of_words,
                 cond_text=prefix,
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         length=length,
         verbosity=verbosity,
         prefixes=prefixes,
-        file=output_file
+        dst_file=output_file
     )
     time_lag = time.time() - start_time
     os.rename(output_file, '{},time={:.2f}'.format(output_file, time_lag))
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         length=length,
         verbosity=verbosity,
         prefixes=prefixes,
-        file=output_file
+        dst_file=output_file
     )
     time_lag = time.time() - start_time
     os.rename(output_file, '{},time={:.2f}'.format(output_file, time_lag))
