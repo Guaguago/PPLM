@@ -62,7 +62,7 @@ if __name__ == '__main__':
     start_time = time.time()
     output_file = output_file_path('positive', 'positive_vad_words', seed, total_samples, num_iterations)
     generation(
-        bag_of_words='positive_words',
+        bag_of_words='positive_vad_words',
         seed=seed,
         num_samples_each_prefix=num_samples_each_prefix,
         num_iterations=num_iterations,
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     start_time = time.time()
     output_file = output_file_path('negative', 'negative_vad_words', seed, total_samples, num_iterations)
     generation(
-        bag_of_words='negative_words',
+        bag_of_words='negative_vad_words',
         seed=seed,
         num_samples_each_prefix=num_samples_each_prefix,
         num_iterations=num_iterations,
