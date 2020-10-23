@@ -22,8 +22,8 @@ def generation(bag_of_words, seed, num_samples_each_prefix, length, step_size, n
                 stepsize=step_size,
                 sample=True,
                 num_iterations=num_iterations,
-                gamma=1,
-                gm_scale=0.95,
+                gamma=1.5,
+                gm_scale=0.9,
                 kl_scale=0.01,
                 verbosity=verbosity,
                 file=file,
@@ -35,10 +35,10 @@ if __name__ == '__main__':
     prefixes = [
         # standard 15 prefixes
         'Once upon a time',
-        'The book', 'The chicken',
-        'The city', 'The country',
-        'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
-        'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
+        # 'The book', 'The chicken',
+        # 'The city', 'The country',
+        # 'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
+        # 'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # # # extra 35 prefixes
         # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
         # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
@@ -51,12 +51,12 @@ if __name__ == '__main__':
 
     # 2.Common Hyperparameters
     seed = 1
-    num_samples_each_prefix = 3
+    num_samples_each_prefix = 1
     total_samples = len(prefixes) * num_samples_each_prefix
-    num_iterations = 10
-    step_size = 0.03  # control strength "dead dead ... dead"
-    length = 50
-    verbosity = 'quiet'
+    num_iterations = 3
+    step_size = 0.01  # control strength "dead dead ... dead"
+    length = 5
+    verbosity = 'regular'
 
     # 3.Positive Control With Specific Parameters Assigned
     start_time = time.time()
