@@ -3,9 +3,9 @@ import time
 import os
 
 
-def output_file_path(task, seed, total_samples, m):
-    dst_file_name = '{},PPLM-BoW,seed={},n={},m={}'.format(
-        task, seed, total_samples, m)
+def output_file_path(task, bow, seed, total_samples, m):
+    dst_file_name = '{},PPLM-BoW,BoW={},seed={},n={},m={}'.format(
+        task, bow, seed, total_samples, m)
     return 'automated_evaluation/generated_samples/{}/{}'.format(task, dst_file_name)
 
 
@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     # 3.Positive Control With Specific Parameters Assigned
     start_time = time.time()
-    output_file = output_file_path('positive', seed, total_samples, num_iterations)
+    output_file = output_file_path('positive', 'positive_vad_words', seed, total_samples, num_iterations)
     generation(
         bag_of_words='positive_words',
         seed=seed,
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
     # 4.Negative Control With Specific Parameters Assigned
     start_time = time.time()
-    output_file = output_file_path('negative', seed, total_samples, num_iterations)
+    output_file = output_file_path('negative', 'negative_vad_words', seed, total_samples, num_iterations)
     generation(
         bag_of_words='negative_words',
         seed=seed,
