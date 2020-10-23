@@ -1,6 +1,7 @@
 from run_pplm import run_pplm_example
 import statistics as stat
 import os
+import time
 
 
 def generate_samples(
@@ -27,6 +28,7 @@ def generate_samples(
     output = 'automated_evaluation/generated_samples/{}/{}'.format(sentiment_label, file_name)
 
     word_changes_list = []
+    start_time = time.time()
     for prefix in prefixes:
         with open(output, 'a') as file:
             word_changes = run_pplm_example(
@@ -36,7 +38,7 @@ def generate_samples(
                 class_label='very_{}'.format(sentiment_label),
                 length=length,  # influence random
                 seed=seed,
-                stepsize=0.04,
+                stepsize=0.03,
                 sample=True,
                 num_iterations=num_iterations,
                 gamma=1,
@@ -49,17 +51,20 @@ def generate_samples(
                 vad_threshold=vad_threshold,
             )
             word_changes_list.append(word_changes)
-    os.rename('{}'.format(output), '{},changes={:.2f}'.format(output, stat.mean(word_changes_list)))
+    time_lag = time.time() - start_time
+    dst_file_name = '{},changes={:.2f}'.format(output, stat.mean(word_changes_list))
+    os.rename(output, dst_file_name)
+    os.rename(dst_file_name, '{},time={:.2f}'.format(dst_file_name, time_lag))
 
 
 if __name__ == '__main__':
     prefixes = [
         # standard 15 prefixes
         'Once upon a time',
-        # 'The book', 'The chicken',
-        # 'The city', 'The country',
-        # 'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
-        # 'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
+        'The book', 'The chicken',
+        'The city', 'The country',
+        'The horse', 'The lake', 'The last time', 'The movie', 'The painting',
+        'The pizza', 'The potato', 'The president of the country', 'The road', 'The year is 1910.',
         # # # extra 35 prefixes
         # 'The article', 'I would like to', 'We should', 'In the future', 'The cat',
         # 'The piano', 'The walls', 'The hotel', 'The good news', 'The building',
@@ -70,11 +75,11 @@ if __name__ == '__main__':
         # 'We usually', 'My mother', 'My dad', 'The meeting', 'My wife',
     ]
 
-    SEED = 20
+    SEED = 1
     num_iterations = 10
-    num_samples = 10
+    num_samples = 3
     fixed_threshold = 0.01
-    verbosity = 'regular'
+    verbosity = 'quiet'
 
     sample_methods = [
         # 'B',
