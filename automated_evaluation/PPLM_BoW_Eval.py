@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     seed = 1
     step_size = 0.01
-    bow = 'vad_words'
+    bow = 'wordlist'
     baseline_name = 'PPLM-BoW'
     num_samples_per_prefix = 10
     total_samples = len(prefixes) * num_samples_per_prefix * 2
